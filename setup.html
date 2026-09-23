@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ラーメン経営ゲーム｜バランス検証器</title>
+<style>
+:root{
+  --ink:#16233D; --ink-2:#3C4A66; --ink-3:#6B7893;
+  --paper:#E4E7EB; --surface:#FCFCFB; --rule:#C6CCD5; --rule-soft:#DFE3E9;
+  --gold:#B8890E; --gold-soft:#F0E3C0; --alert:#A0322A; --good:#1F6B4F;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP","Songti SC",serif;
+  --gothic:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,"Noto Sans JP","Helvetica Neue",Arial,sans-serif;
+  --mono:"SFMono-Regular",Menlo,Consolas,"Roboto Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink); font-family:var(--gothic);
+  font-size:14px; line-height:1.7; -webkit-font-smoothing:antialiased;
+  font-feature-settings:"palt" 1;
+}
+h1,h2,h3{font-family:var(--mincho); font-weight:600; letter-spacing:.04em; margin:0}
+.mono{font-family:var(--mono); font-variant-numeric:tabular-nums}
+
+/* ---- header ---- */
+header{
+  background:var(--ink); color:#EDEFF3; padding:26px 24px 22px;
+  border-bottom:3px solid var(--gold);
+}
+.hwrap{max-width:1280px;margin:0 auto}
+header h1{font-size:26px; color:#fff; letter-spacing:.08em}
+header h1 .thin{color:var(--gold-soft); font-size:16px; letter-spacing:.16em; display:block; margin-bottom:6px; font-family:var(--gothic); font-weight:400}
+header p{margin:8px 0 0; color:#A9B4C9; font-size:13px; max-width:62ch}
+
+/* ---- layout ---- */
+main{max-width:1280px; margin:0 auto; padding:22px 18px 64px; display:grid; grid-template-columns:320px 1fr; gap:26px; align-items:start}
+@media(max-width:940px){main{grid-template-columns:1fr; padding:16px 12px 48px}}
+
+/* ---- settings rail ---- */
+.rail{position:sticky; top:14px}
+@media(max-width:940px){.rail{position:static}}
+.panel{background:var(--surface); border:1px solid var(--rule); border-radius:2px}
+.panel>details{border-bottom:1px solid var(--rule-soft)}
+.panel>details:last-of-type{border-bottom:none}
+summary{
+  cursor:pointer; padding:11px 14px; font-family:var(--mincho); font-size:14px;
+  letter-spacing:.08em; list-style:none; display:flex; justify-content:space-between; align-items:center;
+}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"＋"; color:var(--ink-3); font-size:12px}
+details[open]>summary{background:#F2F3F1; border-bottom:1px solid var(--rule-soft)}
+details[open]>summary::after{content:"−"}
+summary:focus-visible{outline:2px solid var(--gold); outline-offset:-2px}
+.fields{padding:10px 14px 14px}
+.f{display:grid; grid-template-columns:1fr 78px; gap:6px 10px; align-items:center; margin-bottom:9px}
+.f label{font-size:12.5px; color:var(--ink-2); line-height:1.4}
+.f label small{display:block; color:var(--ink-3); font-size:11px; letter-spacing:0}
+.f input{
+  font-family:var(--mono); font-size:13px; text-align:right; width:100%;
+  padding:5px 7px; border:1px solid var(--rule); border-radius:2px; background:#fff; color:var(--ink);
+}
+.f input:focus{outline:2px solid var(--gold); outline-offset:1px; border-color:var(--gold)}
+.f .full{grid-column:1/-1}
+.chk{display:flex; align-items:center; gap:8px; margin:7px 0; font-size:12.5px; color:var(--ink-2)}
+
+.runbar{margin-top:14px; background:var(--surface); border:1px solid var(--rule); padding:14px}
+button.go{
+  width:100%; padding:12px; border:none; border-radius:2px; cursor:pointer;
+  background:var(--ink); color:#fff; font-family:var(--mincho); font-size:15px; letter-spacing:.14em;
+  transition:background .15s;
+}
+button.go:hover{background:#243456}
+button.go:disabled{background:var(--ink-3); cursor:progress}
+button.go:focus-visible{outline:3px solid var(--gold); outline-offset:2px}
+.ghost{
+  width:100%; margin-top:8px; padding:8px; background:none; border:1px solid var(--rule);
+  border-radius:2px; cursor:pointer; font-family:var(--gothic); font-size:12.5px; color:var(--ink-2);
+}
+.ghost:hover{border-color:var(--ink-3)}
+.bar{height:3px; background:var(--rule-soft); margin-top:11px; overflow:hidden}
+.bar>i{display:block; height:100%; width:0; background:var(--gold); transition:width .12s linear}
+.stat{font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin-top:7px; letter-spacing:.02em}
+
+/* ---- results ---- */
+section{background:var(--surface); border:1px solid var(--rule); margin-bottom:20px}
+section>h2{
+  font-size:15px; padding:12px 18px 11px; border-bottom:1px solid var(--rule-soft);
+  display:flex; align-items:baseline; gap:12px;
+}
+section>h2 em{font-style:normal; font-family:var(--gothic); font-size:11.5px; color:var(--ink-3); letter-spacing:.02em}
+.body{padding:16px 18px 20px}
+.empty{padding:46px 18px; text-align:center; color:var(--ink-3); font-size:13px}
+
+/* diagnosis */
+.dx{display:flex; gap:11px; padding:11px 0; border-bottom:1px dotted var(--rule)}
+.dx:last-child{border-bottom:none}
+.dx b{
+  flex:none; font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; padding:2px 7px;
+  height:20px; line-height:16px; border:1px solid; border-radius:2px;
+}
+.dx.warn b{color:var(--alert); border-color:var(--alert)}
+.dx.ok b{color:var(--good); border-color:var(--good)}
+.dx.info b{color:var(--ink-3); border-color:var(--ink-3)}
+.dx p{margin:0; font-size:13px}
+.dx p span{color:var(--ink-3); font-size:12px; display:block}
+
+canvas{display:block; width:100%; max-width:100%}
+.cap{font-size:11.5px; color:var(--ink-3); margin:9px 0 0; line-height:1.6}
+
+/* table */
+.scroll{overflow-x:auto; -webkit-overflow-scrolling:touch}
+table{border-collapse:collapse; width:100%; font-size:12.5px; white-space:nowrap}
+th,td{padding:6px 9px; text-align:right; border-bottom:1px solid var(--rule-soft)}
+th{font-weight:600; color:var(--ink-3); font-size:11px; letter-spacing:.04em; border-bottom:1px solid var(--rule)}
+td:first-child,th:first-child{text-align:left; white-space:nowrap}
+tbody tr:hover{background:#F5F6F4}
+td.num{font-family:var(--mono); font-variant-numeric:tabular-nums}
+td.neg{color:var(--alert)}
+.swatch{display:inline-block; width:9px; height:9px; margin-right:7px; border-radius:1px; vertical-align:baseline}
+.turnsel{display:flex; gap:5px; flex-wrap:wrap; margin-bottom:12px}
+.turnsel button{
+  font-family:var(--mono); font-size:11.5px; padding:3px 9px; border:1px solid var(--rule);
+  background:#fff; cursor:pointer; border-radius:2px; color:var(--ink-2);
+}
+.turnsel button[aria-pressed=true]{background:var(--ink); color:#fff; border-color:var(--ink)}
+.evt{font-size:12px; color:var(--alert); margin:0 0 10px; font-family:var(--mincho)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header><div class="hwrap">
+  <h1><span class="thin">RAMEN BUSINESS GAME ／ BALANCE LAB</span>ラーメン経営ゲーム　バランス検証器</h1>
+  <p>AI 8タイプを自動対戦させ、係数が偏っていないかを勝率で確かめます。学生に配る前に、ここで「どの戦略も勝ちうる」状態まで数値を詰めてください。</p>
+</div></header>
+
+<main>
+  <!-- ===== 設定 ===== -->
+  <div class="rail">
+    <div class="panel" id="rail"></div>
+    <div class="runbar">
+      <button class="go" id="run">対 戦 を 実 行</button>
+      <button class="ghost" id="reset">既定値に戻す</button>
+      <div class="bar"><i id="prog"></i></div>
+      <div class="stat" id="stat">未実行</div>
+    </div>
+  </div>
+
+  <!-- ===== 結果 ===== -->
+  <div>
+    <section>
+      <h2>診断 <em>数値が壊れている箇所を自動で指摘します</em></h2>
+      <div class="body" id="dxBody"><div class="empty">「対戦を実行」を押すと結果が出ます</div></div>
+    </section>
+
+    <section>
+      <h2>戦略別の勝率 <em>破線が期待値。どれかが突出していたら一本道のゲームです</em></h2>
+      <div class="body"><canvas id="cWin" height="300"></canvas>
+        <p class="cap">毎試行、8タイプから参加人数分をランダムに選んで対戦させ、タイプごとの「参加したときの勝率」を出しています。</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>市場ポジショニングマップ <em>需要の地形と、各店が旗を立てた位置</em></h2>
+      <div class="body"><canvas id="cMap" height="330"></canvas>
+        <p class="cap">代表1試合の最終ターン。地形は消費者の理想こってり度の分布、旗の高さはシェアです。山の頂上に旗が密集していれば共食い、谷に立っていれば客不足。ここが平坦だと差別化の意味が消えます。</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>純資産の推移 <em>代表1試合</em></h2>
+      <div class="body"><canvas id="cNav" height="290"></canvas>
+        <p class="cap">純資産＝現金＋在庫（原価の50%評価）−借入残高。開始時は初期現金と同額です。</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>決算表 <em>代表1試合の各ターン</em></h2>
+      <div class="body" id="tblBody"><div class="empty">未実行</div></div>
+    </section>
+  </div>
+</main>
+
+<script>
+/*ENGINE-START*/
+/* ============================================================
+   ラーメン経営ゲーム — バランス検証エンジン
+   依存なし / 決定論的（シード指定） / ブラウザ・Node 両対応
+   ============================================================ */
+
+/* ---------- 乱数（mulberry32・シード固定） ---------- */
+function makeRng(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function gammaRnd(rng, k) {
+  if (k < 1) return gammaRnd(rng, k + 1) * Math.pow(Math.max(1e-12, rng()), 1 / k);
+  const d = k - 1 / 3, c = 1 / Math.sqrt(9 * d);
+  for (;;) {
+    let x, v;
+    do { x = gauss(rng); v = 1 + c * x; } while (v <= 0);
+    v = v * v * v;
+    const u = rng();
+    if (u < 1 - 0.0331 * x * x * x * x) return d * v;
+    if (Math.log(Math.max(1e-12, u)) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+  }
+}
+function gauss(rng) {
+  let u = 0, v = 0;
+  while (u === 0) u = rng();
+  while (v === 0) v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+/* ---------- 既定パラメータ ---------- */
+const DEFAULTS = {
+  players: 6, turns: 10, popPer: 600,
+  cash0: 500000, cost: 300, priceFloor: 300, priceRef: 800,
+  labor: 20000, sga: 10000, buyCap: 1500, buyCapBroke: 200,
+  mixPrice: 1, mixAd: 1, mixTaste: 1, conc: 18,
+  humps: 2, tasteSens: 1.4, tau: 0.15,
+  awareBase: 0.25, awareMax: 0.97, awareK: 35000,
+  msgStrong: 1.60, msgWeak: 0.55, msgBonus: 0.06, storeBonus: 0.10,
+  repeatThresh: 0.55, buzzK: 15000, topK: 80,
+  scaleDisc: 0, scaleK: 600,
+  rate: 0.05, creditBase: 300000, creditMult: 1.0, storeCost: 200000,
+  res1: 15000, res2: 40000, resRival: 25000, resFree: 20, resN1: 80, resN2: 280,
+  runs: 100, seed: 20260813, reshuffle: 1, events: 1
+};
+
+/* ---------- 戦略アーキタイプ ---------- */
+const ARCHETYPES = [
+  // 金額を直接持たず「目標認知率・原価倍率」で持つ。設定を変えてもAIが追随する
+  { id: 'cheap',   name: '薄利多売', msg:1,   aw: 0.40, mk: 1.27, tp: 0.07, vol: 1.30, note: '価格勝負。数で固定費を吸収する' },
+  { id: 'premium', name: '高付加価値', msg:3, aw: 0.60, mk: 2.15, tp: 0.60, vol: 0.80, note: '高単価・高トッピング。客数は少なくてよい' },
+  { id: 'ads',     name: '宣伝重視', msg:2,   aw: 0.88, mk: 1.70, tp: 0.20, vol: 1.15, note: '認知率を買いに行く' },
+  { id: 'data',    name: '調査重視', msg:0,   aw: 0.65, mk: 1.75, tp: 0.33, vol: 1.00, note: '調査を買い、需要の山と競合の隙間を突く' },
+  { id: 'safe',    name: '財務堅実', msg:1,   aw: 0.33, mk: 1.73, tp: 0.17, vol: 0.85, note: '投資を絞り借入を避ける' },
+  { id: 'balance', name: 'バランス', msg:0,   aw: 0.62, mk: 1.67, tp: 0.27, vol: 1.00, note: '全項目を平均的に' },
+  { id: 'expand',  name: '拡大投資', msg:0,   aw: 0.72, mk: 1.60, tp: 0.30, vol: 1.15, note: '需要が溢れたら2号店を出す' },
+  { id: 'follow',  name: '追随', msg:0,       aw: 0.60, mk: 1.67, tp: 0.27, vol: 1.00, note: '首位の価格・味を模倣する' }
+];
+
+// 宣伝の訴求内容。0は的を絞らない純広告、1〜3は第1志向を狙い撃つ
+const MESSAGES = [
+  { id: 0, name: '認知拡大',   short: '認知', hint: '的を絞らず広く。誰にでも同じだけ届く' },
+  { id: 1, name: '安さ訴求',   short: '安さ', hint: '価格志向の客に濃く届き、他には薄い' },
+  { id: 2, name: '話題性訴求', short: '話題', hint: '宣伝志向の客に濃く届き、他には薄い' },
+  { id: 3, name: '味わい訴求', short: '味',   hint: '味覚志向の客に濃く届き、他には薄い' }
+];
+
+// 目標認知率から必要な宣伝費を逆算する
+function adFor(P, target) {
+  const t = Math.min(target, P.awareMax);
+  const z = (t - P.awareBase) / (1 - P.awareBase);
+  if (z <= 0) return 0;
+  if (z >= 0.95) return P.awareK * 19;
+  return Math.round(P.awareK * z / (1 - z));
+}
+
+/* ---------- 消費者プールの生成 ---------- */
+function makePopulation(P, rng) {
+  const n = P.players * P.popPer;
+  const wP = new Float32Array(n), wA = new Float32Array(n),
+        wT = new Float32Array(n), ideal = new Float32Array(n);
+  const first = new Uint8Array(n); // 0=価格 1=宣伝 2=味覚
+
+  // 6つの志向タイプの構成比：指定した平均構成のまわりでディリクレ分布から引く
+  //   perms[t][0]=0 なら価格が1位、[1]=0 なら宣伝が1位、[2]=0 なら味覚が1位
+  const perms = [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
+  const mw = [P.mixPrice, P.mixAd, P.mixTaste].map(v => Math.max(0.0001, v));
+  const mws = mw[0] + mw[1] + mw[2];
+  const mean = perms.map(pm => {
+    const first = pm[0] === 0 ? 0 : (pm[1] === 0 ? 1 : 2);
+    return mw[first] / mws / 2;
+  });
+  const conc = Math.max(0.3, P.conc);
+  const g = mean.map(m => gammaRnd(rng, conc * m));
+  const gs = g.reduce((a, b) => a + b, 0) || 1;
+  const mix = g.map(x => x / gs);
+  const cum = []; let c = 0;
+  for (let i = 0; i < 6; i++) { c += mix[i]; cum.push(c); }
+
+  // 理想こってり度の分布：ランダムな数・位置・幅の山の混合
+  const K = 1 + Math.floor(rng() * P.humps);
+  const mu = [], sd = [], hw = [];
+  let hs = 0;
+  for (let k = 0; k < K; k++) {
+    mu.push(15 + rng() * 70); sd.push(8 + rng() * 14);
+    const w = 0.4 + rng(); hw.push(w); hs += w;
+  }
+  const hcum = []; let hc = 0;
+  for (let k = 0; k < K; k++) { hc += hw[k] / hs; hcum.push(hc); }
+
+  const RW = [0.6, 0.3, 0.1];
+  const typeCount = new Int32Array(6);
+  for (let i = 0; i < n; i++) {
+    const u = rng();
+    let t = 0; while (t < 5 && u > cum[t]) t++;
+    typeCount[t]++;
+    const p = perms[t];
+    wP[i] = RW[p[0]]; wA[i] = RW[p[1]]; wT[i] = RW[p[2]];
+    first[i] = p[0] === 0 ? 0 : (p[1] === 0 ? 1 : 2);
+
+    const v = rng();
+    let k = 0; while (k < K - 1 && v > hcum[k]) k++;
+    let x = mu[k] + gauss(rng) * sd[k];
+    if (x < 0) x = -x; if (x > 100) x = 200 - x;
+    ideal[i] = Math.max(0, Math.min(100, x));
+  }
+  return { n, wP, wA, wT, ideal, first, mix, typeCount, humpMu: mu, humpSd: sd };
+}
+
+/* ---------- 1ゲームを回す ---------- */
+function playGame(P, rng, archIdx, keepLog) {
+  const pop = makePopulation(P, rng);
+  const n = pop.n, NP = P.players;
+
+  const st = [];
+  for (let j = 0; j < NP; j++) {
+    const a = ARCHETYPES[archIdx[j]];
+    st.push({
+      arch: a, cash: P.cash0, debt: 0, inv: 0, retained: 0, stores: 1,
+      price: 0, top: 0, ad: 0, rich: 50, msg: a.msg,
+      sold: 0, bought: 0, demand: 0, share: 0, dead: false,
+      sample: [], rivalRich: null, researchSpend: 0, lastSoldOut: false
+    });
+  }
+
+  const choice = new Int8Array(n), repeat = new Int8Array(n).fill(-1);
+  const cSat = new Float64Array(NP), cGain = new Float64Array(NP), cBuzz = new Float64Array(NP),
+        cStore = new Float64Array(NP), cMsg = new Int8Array(NP),
+        cPU = new Float64Array(NP), cAU = new Float64Array(NP),
+        cTU = new Float64Array(NP), cSN = new Float64Array(NP), cRI = new Float64Array(NP);
+  // Gumbel雑音は事前生成テーブルから引く（内側ループのlog計算を回避）
+  const tauG = new Float64Array(8192);
+  for (let i = 0; i < 8192; i++) tauG[i] = P.tau * (-Math.log(-Math.log(Math.max(1e-9, rng()))));
+  let gi = (rng() * 8192) | 0;
+  const log = keepLog ? [] : null;
+
+  for (let turn = 1; turn <= P.turns; turn++) {
+    /* --- イベント --- */
+    let ev = null, mCost = 0, mTaste = 1, mPrice = 1, mPop = 1;
+    if (P.events && rng() < 0.20) {
+      const r = Math.floor(rng() * 4);
+      if (r === 0) { ev = '豚骨価格高騰（原価+50円）'; mCost = 50; }
+      else if (r === 1) { ev = 'TV特集（味覚志向が強まる）'; mTaste = 1.35; }
+      else if (r === 2) { ev = '不況（価格志向が強まる）'; mPrice = 1.35; }
+      else { ev = '商店街の祭り（来客+15%）'; mPop = 1.15; }
+    }
+    const unitCost = P.cost + mCost;
+    const effCost = j => {
+      const q = st[j].bought;
+      return unitCost * (1 - P.scaleDisc * q / (q + P.scaleK));
+    };
+
+    /* --- 各AIの意思決定 --- */
+    const leader = st.reduce((b, s, i) => (s.cash - s.debt > st[b].cash - st[b].debt ? i : b), 0);
+    // 公開情報（前期末時点）：販売価格・訴求内容・店舗数・シェア。宣伝費と味は非公開
+    const pub = st.map(s => ({ price: s.price, msg: s.msg, stores: s.stores, share: s.share,
+                               top: s.top, rich: s.rich, ad: s.ad }));
+    for (let j = 0; j < NP; j++) decide(P, st[j], j, st, turn, rng, pop, leader, unitCost, pub);
+
+    /* --- 支払い（仕入・宣伝・調査・出店） --- */
+    for (let j = 0; j < NP; j++) {
+      const s = st[j];
+      s.buyCost = Math.round(s.bought * effCost(j));
+      s.cash -= s.buyCost + s.ad + s.researchSpend + s.newStoreCost;
+      settleCash(P, s);
+    }
+
+    /* --- 認知と選択 --- */
+    for (let j = 0; j < NP; j++) { st[j].demand = 0; st[j].sold = 0; }
+    for (let j = 0; j < NP; j++) {
+      const s = st[j];
+      cSat[j] = s.ad / (s.ad + P.awareK);
+      cGain[j] = (1 - P.awareBase) * cSat[j];
+      cMsg[j] = s.msg;
+      cBuzz[j] = s.ad / (s.ad + P.buzzK);
+      cStore[j] = P.storeBonus * (s.stores - 1);
+      cPU[j] = Math.min(1, (P.priceRef - s.price) / (P.priceRef - P.priceFloor)) * mPrice;
+      cAU[j] = cBuzz[j];
+      cTU[j] = s.top / (s.top + P.topK);
+      cSN[j] = P.tasteSens * (s.stores > 1 ? 0.55 : 1) / 100;
+      cRI[j] = s.rich;
+    }
+    const effN = Math.round(n * mPop);
+    for (let i = 0; i < effN; i++) {
+      const ci = i < n ? i : i - n;
+      const id = pop.ideal[ci], w1 = pop.wP[ci], w2 = pop.wA[ci], w3 = pop.wT[ci] * mTaste, f = pop.first[ci];
+      let best = -1, bu = -1e9, bestU = 0, anyAware = 0;
+      for (let j = 0; j < NP; j++) {
+        if (repeat[ci] !== j) {
+          const mf = cMsg[j] === 0 ? 1 : (cMsg[j] - 1 === f ? P.msgStrong : P.msgWeak);
+          let pa = P.awareBase + cGain[j] * mf + cStore[j];
+          if (pa > P.awareMax) pa = P.awareMax;
+          if (rng() >= pa) continue;
+        }
+        anyAware = 1;
+        let d = id - cRI[j]; if (d < 0) d = -d;
+        let u = w1 * cPU[j] + w2 * cAU[j] + w3 * (cTU[j] - cSN[j] * d);
+        if (cMsg[j] !== 0 && cMsg[j] - 1 === f) u += P.msgBonus * cBuzz[j];
+        const g = u + tauG[(gi = (gi + 1) & 8191)];
+        if (g > bu) { bu = g; best = j; bestU = u; }
+      }
+      if (!anyAware) { best = (Math.random() * NP) | 0; bestU = 0; }
+      choice[ci] = best;
+      st[best].demand++;
+      repeat[ci] = bestU > P.repeatThresh ? best : -1;
+    }
+
+    /* --- 在庫制約と再選択 --- */
+    const stock = st.map(s => s.inv + s.bought);
+    const turnAway = st.map((s, j) => Math.max(0, s.demand - stock[j]));
+    for (let j = 0; j < NP; j++) st[j].sold = Math.min(st[j].demand, stock[j]);
+    if (P.reshuffle) {
+      const remain = st.map((s, j) => stock[j] - s.sold);
+      for (let i = 0; i < n; i++) {
+        const j = choice[i];
+        if (turnAway[j] <= 0) continue;
+        if (rng() >= turnAway[j] / st[j].demand) continue;
+        const id = pop.ideal[i], w1 = pop.wP[i], w2 = pop.wA[i], w3 = pop.wT[i] * mTaste, f = pop.first[i];
+        let best = -1, bu = -1e9;
+        for (let k = 0; k < NP; k++) {
+          if (k === j || remain[k] <= 0) continue;
+          let d = id - cRI[k]; if (d < 0) d = -d;
+          let u = w1 * cPU[k] + w2 * cAU[k] + w3 * (cTU[k] - cSN[k] * d);
+          if (cMsg[k] !== 0 && cMsg[k] - 1 === f) u += P.msgBonus * cBuzz[k];
+          if (u > bu) { bu = u; best = k; }
+        }
+        if (best >= 0) { remain[best]--; st[best].sold++; }
+      }
+    }
+
+    /* --- 決算 --- */
+    const totalSold = st.reduce((a, s) => a + s.sold, 0) || 1;
+    const row = [];
+    for (let j = 0; j < NP; j++) {
+      const s = st[j];
+      const rev = s.sold * s.price;
+      const cogs = Math.round(s.sold * (s.bought > 0 ? s.buyCost / s.bought : unitCost));
+      const topc = s.sold * s.top;
+      const fixed = s.stores * (P.labor + P.sga);
+      const interest = Math.round(s.debt * P.rate);
+      const profit = rev - cogs - topc - fixed - interest - s.ad - s.researchSpend - s.newStoreCost;
+      s.cash += rev - topc - fixed - interest;
+      s.inv = s.inv + s.bought - s.sold;
+      s.retained += profit;
+      s.share = s.sold / totalSold;
+      s.lastSoldOut = s.sold >= stock[j] && s.demand > stock[j];
+      s.lastDemand = s.demand; s.lastStock = stock[j];
+      settleCash(P, s);
+      if (keepLog) row.push({
+        name: s.arch.name, price: s.price, top: s.top, ad: s.ad, rich: s.rich, msg: s.msg,
+        bought: s.bought, demand: s.demand, sold: s.sold, share: s.share,
+        rev, profit, cash: Math.round(s.cash), debt: Math.round(s.debt),
+        inv: s.inv, retained: Math.round(s.retained), stores: s.stores,
+        nav: Math.round(navOf(P, s))
+      });
+      s.researchSpend = 0; s.newStoreCost = 0;
+    }
+    if (keepLog) log.push({ turn, ev, rows: row });
+  }
+
+  const nav = st.map(s => navOf(P, s));
+  let win = 0;
+  for (let j = 1; j < NP; j++) if (nav[j] > nav[win]) win = j;
+  return { st, nav, win, pop, log };
+}
+
+function navOf(P, s) { return s.cash + s.inv * P.cost * 0.5 - s.debt; }
+
+function creditLimit(P, s) { return P.creditBase + Math.max(0, s.retained) * P.creditMult; }
+
+function settleCash(P, s) {
+  if (s.cash < 0) {
+    const room = creditLimit(P, s) - s.debt;
+    const need = -s.cash;
+    const draw = Math.min(need, Math.max(0, room));
+    s.debt += draw; s.cash += draw;
+    if (s.cash < 0) { s.cash = 0; s.dead = true; }
+  }
+}
+
+/* ---------- AIの意思決定 ---------- */
+function decide(P, s, j, all, turn, rng, pop, leader, unitCost, pub) {
+  const a = s.arch;
+  s.researchSpend = 0; s.newStoreCost = 0;
+  const fair = pop.n / P.players;
+
+  /* 基準値は原価・認知パラメータから毎期導出する */
+  const basePrice = Math.round(P.cost * a.mk);
+  const baseTop = Math.round(P.cost * a.tp);
+  const baseAd = adFor(P, a.aw);
+
+  if (turn === 1) { s.price = basePrice; s.top = baseTop; s.ad = baseAd; }
+  else {
+    if (s.lastSoldOut) s.price += Math.round(P.cost * 0.07);
+    else if (s.sold < s.lastStock * 0.8) s.price -= Math.round(P.cost * 0.05);
+    if (s.share < (1 / P.players) * 0.75) s.price -= Math.round(P.cost * 0.05);
+    if (s.share > (1 / P.players) * 1.4) s.price += Math.round(P.cost * 0.03);
+    s.top = baseTop;
+    s.ad = baseAd;
+    // 直近の粗利で賄えない宣伝費は削る
+    const gm = Math.max(0, s.sold * (s.price - unitCost - s.top));
+    const room = gm - s.stores * (P.labor + P.sga);
+    if (s.ad > room * 1.6 && turn > 2) s.ad = Math.max(Math.round(baseAd * 0.35), Math.round(room * 1.6));
+  }
+  if (a.id === 'follow' && turn > 1) {
+    s.price = Math.round(pub[leader].price * 0.97);  // 価格は公開情報
+  }
+  if (s.cash < P.cash0 * 0.25) s.ad = Math.round(s.ad * 0.5);
+  // 原価＋トッピングを下回る値付けはしない（粗利が出ない領域には踏み込まない）
+  const floor = Math.max(P.priceFloor, unitCost + s.top + Math.round(P.cost * 0.10));
+  s.price = Math.max(floor, Math.min(P.priceRef * 1.6, Math.round(s.price)));
+
+  /* 調査 */
+  if (a.id === 'data') {
+    if (s.cash > P.cash0 * 0.36) {
+      if (turn === 1) { s.researchSpend += P.res2; addSample(s, pop, P.resFree + P.resN2, rng); }
+      else { s.researchSpend += P.res1; addSample(s, pop, P.resFree + P.resN1, rng); }
+      if (turn > 1 && turn % 2 === 0 && s.cash > P.cash0 * 0.52) {
+        s.researchSpend += P.resRival;
+        s.rivalRich = all.map((x, k) => (k === j ? null : x.rich));
+        s.rivalInfo = all.map((x, k) => (k === j ? null : { rich: x.rich, top: x.top, ad: x.ad }));
+      }
+    } else { addSample(s, pop, P.resFree, rng); s.rivalRich = null; s.rivalInfo = null; }
+  } else { addSample(s, pop, P.resFree, rng); s.rivalRich = null; s.rivalInfo = null; }
+
+  /* 味の方向性 */
+  if (a.id === 'data') {
+    let bestX = 50, bestScore = -1e9;
+    for (let x = 0; x <= 100; x += 2) {
+      let d = 0;
+      for (let k = 0; k < s.sample.length; k++) { const z = (s.sample[k] - x) / 12; d += Math.exp(-0.5 * z * z); }
+      d /= Math.max(1, s.sample.length);
+      let crowd = 0;
+      if (s.rivalRich) for (let k = 0; k < s.rivalRich.length; k++) {
+        if (s.rivalRich[k] == null) continue;
+        const z = (s.rivalRich[k] - x) / 15; crowd += Math.exp(-0.5 * z * z);
+      }
+      const sc = d / (1 + crowd);
+      if (sc > bestScore) { bestScore = sc; bestX = x; }
+    }
+    s.rich = bestX;
+  } else if (turn === 1) {
+    s.rich = 50 + Math.round((rng() - 0.5) * 50);
+  }
+  s.rich = Math.max(0, Math.min(100, s.rich));
+
+  /* 宣伝の訴求内容 */
+  if (a.id === 'data') {
+    // 訴求内容は乗り換えると常連を失う。序盤に決めて貫き、大きく不利になった時だけ変える
+    const want = chooseMessage(P, s, j, all, unitCost);
+    if (turn <= 2) s.msg = want;
+    else if (s.share < (1 / P.players) * 0.7 && turn % 3 === 0) s.msg = want;
+  } else if (a.id === 'follow' && turn > 1) {
+    s.msg = pub[leader].msg;   // 訴求内容も公開情報
+  } else s.msg = a.msg;
+
+  /* 出店：需要が capacity を超えたときだけ */
+  if (a.id === 'expand' && s.stores === 1 && turn >= 2 && turn <= P.turns - 3 &&
+      s.lastSoldOut && s.cash > P.storeCost + P.cash0 * 0.3) {
+    s.newStoreCost = P.storeCost; s.stores = 2;
+  }
+
+  /* 仕入れ */
+  let target = fair * a.vol;
+  if (turn > 1) {
+    if (s.lastSoldOut) target = s.lastDemand * 1.15;
+    else if (s.inv > s.sold * 0.25) target = Math.max(0, s.sold * 0.9 - s.inv);
+    else target = Math.max(s.sold * 1.05 - s.inv, fair * 0.3);
+    if (s.newStoreCost > 0) target *= 1.5;
+  }
+  const funds = s.cash + Math.max(0, creditLimit(P, s) - s.debt) - s.ad - s.researchSpend - s.newStoreCost;
+  const capMoney = funds > 0 ? Math.floor(funds / unitCost) : 0;
+  const hardCap = (s.cash <= 0 && s.debt >= creditLimit(P, s)) ? P.buyCapBroke : P.buyCap * s.stores;
+  s.bought = Math.max(0, Math.min(Math.round(target), capMoney, hardCap));
+}
+
+/* 標本と公開情報（他店の価格）から、4つの訴求のうち最も客数が伸びるものを選ぶ。
+   「どの層が多いか」だけでなく「その層に自店が勝てるか」まで見るのが要点。 */
+function chooseMessage(P, s, j, pub, unitCost) {
+  const N = Math.min(140, s.sample.length);
+  if (N < 5) return 0;
+  const myPU = Math.min(1, (P.priceRef - s.price) / (P.priceRef - P.priceFloor));
+  const myAU = s.ad / (s.ad + P.buzzK);
+  const myTU = s.top / (s.top + P.topK);
+  const gain = (1 - P.awareBase) * (s.ad / (s.ad + P.awareK));
+  // 他店：価格は公開情報。味の位置は競合調査を買っていれば既知、なければ中央と仮定
+  const avgAd = pub.reduce((t, x) => t + x.ad, 0) / pub.length;
+  const rivals = pub.map((x, k) => {
+    if (k === j) return null;
+    const info = s.rivalInfo ? s.rivalInfo[k] : null;
+    const ad = info ? info.ad : avgAd;           // 宣伝費は競合調査を買わないと分からない
+    const msg = x.msg;                           // 訴求内容は公開情報
+    return {
+      pu: Math.min(1, (P.priceRef - x.price) / (P.priceRef - P.priceFloor)),
+      au: ad / (ad + P.buzzK),
+      tu: info ? info.top / (info.top + P.topK) : myTU,
+      rich: info ? info.rich : 50,
+      gain: (1 - P.awareBase) * (ad / (ad + P.awareK)),
+      msg
+    };
+  }).filter(Boolean);
+
+  const score = [0, 0, 0, 0];
+  for (let i = 0; i < N; i++) {
+    const id = s.sample[i], f = s.sampleFirstArr[i];
+    const w = [0.2, 0.2, 0.2]; w[f] = 0.6;
+    let dm = id - s.rich; if (dm < 0) dm = -dm;
+    const myBase = w[0] * myPU + w[1] * myAU + w[2] * (myTU - P.tasteSens * dm / 100);
+    for (let m = 0; m < 4; m++) {
+      const hit = m !== 0 && m - 1 === f;
+      const mf = m === 0 ? 1 : (hit ? P.msgStrong : P.msgWeak);
+      let aw = P.awareBase + gain * mf; if (aw > P.awareMax) aw = P.awareMax;
+      const u = myBase + (hit ? P.msgBonus * myAU : 0);
+      // 自店より魅力の高い他店が「1軒も認知されない」確率をかける
+      let survive = 1;
+      for (let r = 0; r < rivals.length; r++) {
+        const v = rivals[r];
+        let d = id - v.rich; if (d < 0) d = -d;
+        let ru = w[0] * v.pu + w[1] * v.au + w[2] * (v.tu - P.tasteSens * d / 100);
+        if (v.msg !== 0 && v.msg - 1 === f) ru += P.msgBonus * v.au;
+        if (ru <= u) continue;
+        const rmf = v.msg === 0 ? 1 : (v.msg - 1 === f ? P.msgStrong : P.msgWeak);
+        let raw = P.awareBase + v.gain * rmf; if (raw > P.awareMax) raw = P.awareMax;
+        survive *= (1 - raw);
+      }
+      score[m] += aw * (survive + (1 - survive) * 0.12);
+    }
+  }
+  let bm = 0; for (let m = 1; m < 4; m++) if (score[m] > score[bm]) bm = m;
+  return bm;
+}
+
+function addSample(s, pop, k, rng) {
+  s.sample = []; s.sampleFirstArr = []; s.sampleFirst = [0, 0, 0];
+  for (let i = 0; i < k; i++) {
+    const idx = Math.floor(rng() * pop.n);
+    s.sample.push(pop.ideal[idx]);
+    s.sampleFirstArr.push(pop.first[idx]);
+    s.sampleFirst[pop.first[idx]]++;
+  }
+}
+
+/* ---------- 多数回試行 ---------- */
+function runBatch(P, from, to, acc, rng) {
+  for (let r = from; r < to; r++) {
+    const idx = pickArchetypes(P.players, rng);
+    const g = playGame(P, rng, idx, false);
+    for (let j = 0; j < P.players; j++) {
+      const ai = idx[j];
+      acc.appear[ai]++;
+      acc.navSum[ai] += g.nav[j];
+      if (g.win === j) acc.wins[ai]++;
+      if (g.st[j].dead) acc.dead[ai]++;
+      acc.priceSum += g.st[j].price; acc.priceN++;
+      acc.richArr.push(g.st[j].rich);
+      acc.msgCount[g.st[j].msg]++;
+      if (g.st[j].lastSoldOut) acc.soldOut++;
+      acc.soldOutN++;
+      if (g.nav[j] < P.cash0) acc.below++;
+      acc.belowN++;
+    }
+    acc.games++;
+    acc.navSpread.push(Math.max(...g.nav) - Math.min(...g.nav));
+  }
+}
+
+function pickArchetypes(k, rng) {
+  const pool = ARCHETYPES.map((_, i) => i);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, k);
+}
+
+function newAcc() {
+  return {
+    games: 0, wins: new Array(8).fill(0), appear: new Array(8).fill(0),
+    navSum: new Array(8).fill(0), dead: new Array(8).fill(0),
+    priceSum: 0, priceN: 0, richArr: [], msgCount: [0,0,0,0], soldOut: 0, soldOutN: 0,
+    below: 0, belowN: 0, navSpread: []
+  };
+}
+/*ENGINE-END*/
+
+/* ============================================================
+   UI
+   ============================================================ */
+const SERIES = ['#1B3A6B','#A0322A','#1F6B4F','#B8890E','#5C3C79','#0F7A82','#8A4B12','#5A6472'];
+const $ = s => document.querySelector(s);
+
+const GROUPS = [
+  { title:'ゲームの骨格', open:true, items:[
+    ['players','参加人数','2〜8人（チーム）',1],
+    ['turns','ターン数','4〜12期',1],
+    ['popPer','1人あたり住人数','住人総数＝人数×この値',1],
+    ['cash0','初期現金','円',1],
+    ['turnsNote','','',0]
+  ]},
+  { title:'原価と固定費', items:[
+    ['cost','原材料費','1食あたり円',1],
+    ['priceFloor','販売価格の下限','円',1],
+    ['priceRef','価格満足度がゼロになる価格','この価格で価格評価0、下限で1',1],
+    ['labor','人件費','1店1期あたり円',1],
+    ['sga','販管費','1店1期あたり円',1],
+    ['buyCap','仕入上限','1店1期あたり食',1],
+    ['buyCapBroke','資金枯渇時の仕入上限','食',1],
+    ['scaleDisc','仕入の数量割引の上限','0＝なし。0.1で最大10%引き',1],
+    ['scaleK','数量割引が半分効く仕入量','食',1]
+  ]},
+  { title:'消費者のふるまい', items:[
+    ['mixPrice','価格志向の厚み','3つの比で構成を決める',1],
+    ['mixAd','宣伝志向の厚み','',1],
+    ['mixTaste','味覚志向の厚み','',1],
+    ['conc','街ごとの構成のばらつき','小さいほど毎回極端な街になる',1],
+    ['humps','味の好みの山の数','1〜この数でランダム',1],
+    ['tasteSens','味のズレへの厳しさ','大きいほど差別化が効く',1],
+    ['tau','選択のゆらぎ','大きいほど気まぐれ',1],
+    ['topK','トッピングの効き','この額で満足度が半分に到達',1],
+    ['repeatThresh','常連になる満足度','超えると翌期は無条件で認知',1]
+  ]},
+  { title:'認知と宣伝', items:[
+    ['awareBase','宣伝ゼロでの認知率','0〜1',1],
+    ['awareMax','認知率の上限','いくら宣伝しても超えない',1],
+    ['awareK','宣伝費の効き（認知）','この額で伸び幅の半分',1],
+    ['buzzK','宣伝費の効き（話題性）','この額で話題評価0.5',1],
+    ['storeBonus','2号店の認知加算','0〜1',1],
+    ['msgStrong','訴求が刺さる層への倍率','狙った層への届きやすさ',1],
+    ['msgWeak','それ以外の層への倍率','的を絞った代償',1],
+    ['msgBonus','訴求が刺さったときの好感','満足度への上乗せ',1]
+  ]},
+  { title:'財務', items:[
+    ['rate','金利','1期あたり（0.05＝5%）',1],
+    ['creditBase','借入枠の基礎額','円',1],
+    ['creditMult','利益剰余金による枠の上乗せ','倍',1],
+    ['storeCost','2号店の出店費用','円',1]
+  ]},
+  { title:'市場調査', items:[
+    ['resFree','無料調査の標本数','人',1],
+    ['res1','追加調査の費用','円',1],
+    ['resN1','追加調査の標本数','人',1],
+    ['res2','精密調査の費用','円',1],
+    ['resN2','精密調査の標本数','人',1],
+    ['resRival','競合調査の費用','他店の味・ﾄｯﾋﾟﾝｸﾞ・宣伝費が分かる',1]
+  ]},
+  { title:'実行条件', open:true, items:[
+    ['runs','試行回数','多いほど勝率が安定',1],
+    ['seed','乱数シード','同じ値なら同じ結果',1]
+  ]}
+];
+
+function buildRail(){
+  const rail = $('#rail'); rail.innerHTML='';
+  GROUPS.forEach(g=>{
+    const d=document.createElement('details'); if(g.open)d.open=true;
+    d.innerHTML='<summary>'+g.title+'</summary>';
+    const f=document.createElement('div'); f.className='fields';
+    g.items.forEach(([k,lab,hint,show])=>{
+      if(!show)return;
+      const row=document.createElement('div'); row.className='f';
+      row.innerHTML='<label for="p_'+k+'">'+lab+(hint?'<small>'+hint+'</small>':'')+'</label>'+
+        '<input id="p_'+k+'" type="number" step="any" value="'+DEFAULTS[k]+'">';
+      f.appendChild(row);
+    });
+    if(g.title==='実行条件'){
+      f.insertAdjacentHTML('beforeend',
+        '<label class="chk"><input type="checkbox" id="p_events" checked>ランダムイベントを起こす</label>'+
+        '<label class="chk"><input type="checkbox" id="p_reshuffle" checked>品切れの客は他店へ流れる</label>');
+    }
+    d.appendChild(f); rail.appendChild(d);
+  });
+}
+function readParams(){
+  const P=Object.assign({},DEFAULTS);
+  Object.keys(DEFAULTS).forEach(k=>{
+    const el=document.getElementById('p_'+k); if(!el)return;
+    P[k] = el.type==='checkbox' ? (el.checked?1:0) : parseFloat(el.value);
+    if(!isFinite(P[k])) P[k]=DEFAULTS[k];
+  });
+  P.players=Math.max(2,Math.min(8,Math.round(P.players)));
+  P.turns=Math.max(2,Math.min(24,Math.round(P.turns)));
+  P.runs=Math.max(10,Math.min(3000,Math.round(P.runs)));
+  return P;
+}
+
+/* ---------- canvas helper ---------- */
+function prep(cv,h){
+  const dpr=window.devicePixelRatio||1, w=cv.clientWidth||600;
+  cv.width=w*dpr; cv.height=h*dpr; cv.style.height=h+'px';
+  const x=cv.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,w,h);
+  x.textBaseline='middle';
+  return {x,w,h};
+}
+const GO='"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif';
+const MO='"SFMono-Regular",Menlo,Consolas,monospace';
+// ラベルの縦位置を最小間隔を保って押し広げる
+function spread(want,gap,lo,hi){
+  const idx=want.map((v,i)=>i).sort((a,b)=>want[a]-want[b]);
+  const y=want.slice();
+  for(const i of idx) y[i]=Math.max(lo,Math.min(hi,y[i]));
+  for(let k=1;k<idx.length;k++){const a=idx[k-1],b=idx[k]; if(y[b]-y[a]<gap) y[b]=y[a]+gap;}
+  const last=idx[idx.length-1];
+  if(y[last]>hi){ y[last]=hi;
+    for(let k=idx.length-2;k>=0;k--){const a=idx[k],b=idx[k+1]; if(y[b]-y[a]<gap) y[a]=y[b]-gap;} }
+  return y;
+}
+const yen=v=>(v<0?'−':'')+Math.abs(Math.round(v)).toLocaleString('ja-JP');
+
+/* ---------- 勝率 ---------- */
+function drawWin(acc,P){
+  const cv=$('#cWin'); const H=44*8+42; const {x,w,h}=prep(cv,H);
+  const L=88,R=w-58, exp=100/P.players;
+  ARCHETYPES.forEach((a,i)=>{
+    const ap=acc.appear[i]; const wr=ap?100*acc.wins[i]/ap:0;
+    const y=26+i*44;
+    x.fillStyle='#3C4A66'; x.font='13px '+GO; x.textAlign='right';
+    x.fillText(a.name,L-12,y+9);
+    const maxW=R-L, sc=Math.max(exp*2.2,Math.max(...ARCHETYPES.map((_,k)=>acc.appear[k]?100*acc.wins[k]/acc.appear[k]:0))*1.12,1);
+    x.fillStyle='#EDEFF1'; x.fillRect(L,y,maxW,17);
+    x.fillStyle=SERIES[i]; x.fillRect(L,y,maxW*Math.min(1,wr/sc),17);
+    x.fillStyle='#16233D'; x.font='12px '+MO; x.textAlign='left';
+    x.fillText(wr.toFixed(1)+'%',R+8,y+9);
+    x.fillStyle='#6B7893'; x.font='11px '+GO;
+    x.fillText(a.note,L,y+29);
+    if(i===0){
+      const ex=L+maxW*Math.min(1,exp/sc);
+      x.save(); x.strokeStyle='#A0322A'; x.setLineDash([4,3]); x.lineWidth=1;
+      x.beginPath(); x.moveTo(ex,8); x.lineTo(ex,H-8); x.stroke(); x.restore();
+      x.fillStyle='#A0322A'; x.font='10.5px '+MO; x.textAlign='center';
+      x.fillText('期待値 '+exp.toFixed(1)+'%',ex,4);
+    }
+  });
+}
+
+/* ---------- 市場ポジショニングマップ（署名要素） ---------- */
+function drawMap(g,P){
+  const cv=$('#cMap'); const {x,w,h}=prep(cv,330);
+  const L=42,R=w-16,T=26,B=h-34, PW=R-L, PH=B-T;
+  // 需要密度
+  const bins=new Float64Array(101);
+  for(let i=0;i<g.pop.n;i++) bins[Math.round(g.pop.ideal[i])]++;
+  const sm=new Float64Array(101);
+  for(let i=0;i<=100;i++){let s=0,n=0;for(let k=-4;k<=4;k++){const j=i+k;if(j<0||j>100)continue;s+=bins[j];n++;}sm[i]=s/n;}
+  const mx=Math.max(...sm)||1;
+  const X=v=>L+PW*v/100, Y=v=>B-PH*0.62*v/mx;
+  // 地形
+  x.beginPath(); x.moveTo(L,B);
+  for(let i=0;i<=100;i++) x.lineTo(X(i),Y(sm[i]));
+  x.lineTo(R,B); x.closePath();
+  const gr=x.createLinearGradient(0,T,0,B);
+  gr.addColorStop(0,'rgba(27,58,107,.20)'); gr.addColorStop(1,'rgba(27,58,107,.05)');
+  x.fillStyle=gr; x.fill();
+  x.strokeStyle='#1B3A6B'; x.lineWidth=1.4; x.beginPath();
+  for(let i=0;i<=100;i++){const px=X(i),py=Y(sm[i]); i?x.lineTo(px,py):x.moveTo(px,py);} x.stroke();
+  // 軸
+  x.strokeStyle='#C6CCD5'; x.lineWidth=1; x.beginPath(); x.moveTo(L,B); x.lineTo(R,B); x.stroke();
+  x.fillStyle='#6B7893'; x.font='11px '+MO; x.textAlign='center';
+  [0,25,50,75,100].forEach(v=>x.fillText(v,X(v),B+14));
+  x.font='11px '+GO;
+  x.textAlign='left'; x.fillText('あっさり',L,B+28);
+  x.textAlign='right'; x.fillText('こってり',R,B+28);
+  x.textAlign='left'; x.fillStyle='#8B95A8'; x.fillText('消費者の理想こってり度の分布',L,T-12);
+  // 旗
+  const st=g.st, maxS=Math.max(...st.map(s=>s.share))||1;
+  const order=st.map((s,i)=>i).sort((a,b)=>st[a].rich-st[b].rich);
+  const geo=order.map(j=>{
+    const s=st[j], px=X(s.rich);
+    const gy=Y(sm[Math.round(s.rich)]);
+    const fh=24+(PH*0.34)*(s.share/maxS);
+    return {j,px,gy,top:gy-fh};
+  });
+  const lab=spread(geo.map(o=>o.top+7),19,T+10,B-12);
+  // 各ラベルは「自分の旗の右／左」を軸に、置ける場所が見つかるまで少しずつ外側へ試していく。
+  // 片側で置き場がなければ反対側も試すので、端に寄っても他の旗の上に乗らない。
+  const items=geo.map((o,k)=>{
+    const s=st[o.j];
+    const idx=ARCHETYPES.findIndex(a=>a.name===s.arch.name);
+    const col=SERIES[idx<0?o.j:idx];
+    const txt=s.arch.name+'  '+(100*s.share).toFixed(1)+'%';
+    x.font='11.5px '+GO; const tw=x.measureText(txt).width;
+    return {o,col,txt,tw,ly:lab[k],right:true,lx:0};
+  });
+  const flagRects=geo.map(o=>({l:o.px-4,r:o.px+27,t:o.top-4,b:o.top+19}));
+  const hit=(a,b)=>a.l<b.r&&a.r>b.l&&a.t<b.b&&a.b>b.t;
+  const rectFor=(it,right,lx)=>right?{l:lx-4,r:lx+it.tw+4,t:it.ly-10,b:it.ly+10}
+                                     :{l:lx-it.tw-4,r:lx+4,t:it.ly-10,b:it.ly+10};
+  const placed=[];
+  items.forEach((it,idx)=>{
+    const o=it.o, prefRight=o.px+26+it.tw<R;
+    const sides=prefRight?[true,false]:[false,true];
+    let chosen=null;
+    for(const right of sides){
+      for(let push=0;push<=Math.max(PW,400) && !chosen;push+=8){
+        const lx=right?o.px+25+push:o.px-6-push;
+        const rect=rectFor(it,right,lx);
+        if(rect.l<L||rect.r>R)continue;
+        let ok=true;
+        for(let fi=0;fi<flagRects.length;fi++){if(fi!==idx&&hit(rect,flagRects[fi])){ok=false;break;}}
+        if(ok)for(const p of placed){if(hit(rect,p)){ok=false;break;}}
+        if(ok){chosen={right,lx,rect};break;}
+      }
+      if(chosen)break;
+    }
+    if(!chosen){const right=prefRight,lx=right?o.px+25:o.px-6;chosen={right,lx,rect:rectFor(it,right,lx)};}
+    it.right=chosen.right; it.lx=chosen.lx; placed.push(chosen.rect);
+  });
+  items.forEach(it=>{
+    const o=it.o, col=it.col, txt=it.txt, tw=it.tw, right=it.right, lx=it.lx, ly=it.ly;
+    x.strokeStyle='#16233D'; x.lineWidth=1.2;
+    x.beginPath(); x.moveTo(o.px,o.gy); x.lineTo(o.px,o.top); x.stroke();
+    x.fillStyle=col;
+    x.beginPath(); x.moveTo(o.px,o.top); x.lineTo(o.px+21,o.top+6); x.lineTo(o.px,o.top+12); x.closePath(); x.fill();
+    x.beginPath(); x.arc(o.px,o.gy,2.6,0,7); x.fillStyle='#16233D'; x.fill();
+    x.font='11.5px '+GO;
+    if(Math.abs(ly-(o.top+6))>2 || Math.abs(lx-(right?o.px+25:o.px-6))>2){
+      x.strokeStyle='#AEB6C2'; x.lineWidth=1;
+      x.beginPath(); x.moveTo(o.px+(right?21:0),o.top+6); x.lineTo(lx+(right?-2:2),ly); x.stroke();
+    }
+    // 白いハローで重なりを読めるようにする
+    x.fillStyle='rgba(252,252,251,.90)';
+    x.fillRect(right?lx-3:lx-tw-3, ly-8, tw+6, 16);
+    x.textAlign = right?'left':'right';
+    x.fillStyle=col; x.font='11.5px '+GO;
+    x.fillText(txt,lx,ly);
+  });
+}
+
+/* ---------- 純資産推移 ---------- */
+function drawNav(g,P){
+  const cv=$('#cNav'); const {x,w,h}=prep(cv,290);
+  const L=76,R=w-92,T=16,B=h-32, PW=R-L, PH=B-T;
+  const T_=g.log.length;
+  const ser=g.st.map((s,j)=>[P.cash0].concat(g.log.map(l=>l.rows[j].nav)));
+  let lo=Infinity,hi=-Infinity;
+  ser.forEach(a=>a.forEach(v=>{if(v<lo)lo=v;if(v>hi)hi=v;}));
+  const pad=(hi-lo)*0.12||1e5; lo-=pad; hi+=pad;
+  const X=t=>L+PW*t/T_, Y=v=>B-PH*(v-lo)/(hi-lo);
+  // grid
+  x.strokeStyle='#E7EAEE'; x.lineWidth=1; x.fillStyle='#8B95A8'; x.font='10.5px '+MO; x.textAlign='right';
+  for(let k=0;k<=4;k++){
+    const v=lo+(hi-lo)*k/4, y=Y(v);
+    x.beginPath(); x.moveTo(L,y); x.lineTo(R,y); x.stroke();
+    x.fillText(yen(v),L-8,y);
+  }
+  const zy=Y(0);
+  if(zy>T&&zy<B){x.strokeStyle='#C6A6A2'; x.setLineDash([3,3]); x.beginPath(); x.moveTo(L,zy); x.lineTo(R,zy); x.stroke(); x.setLineDash([]);}
+  x.textAlign='center'; x.fillStyle='#8B95A8';
+  for(let t=0;t<=T_;t++) x.fillText(t===0?'開始':t,X(t),B+14);
+  ser.forEach((a,j)=>{
+    const idx=ARCHETYPES.findIndex(q=>q.name===g.st[j].arch.name);
+    x.strokeStyle=SERIES[idx<0?j:idx]; x.lineWidth=2; x.beginPath();
+    a.forEach((v,t)=>{t?x.lineTo(X(t),Y(v)):x.moveTo(X(t),Y(v))}); x.stroke();
+  });
+  const endY=ser.map(a=>Y(a[a.length-1]));
+  const ly=spread(endY.slice(),14,T+6,B-2);
+  ser.forEach((a,j)=>{
+    const idx=ARCHETYPES.findIndex(q=>q.name===g.st[j].arch.name);
+    const col=SERIES[idx<0?j:idx];
+    x.strokeStyle=col; x.lineWidth=1;
+    x.beginPath(); x.moveTo(R,endY[j]); x.lineTo(R+5,ly[j]); x.stroke();
+    x.fillStyle=col; x.font='11px '+GO; x.textAlign='left';
+    x.fillText(g.st[j].arch.name,R+8,ly[j]);
+  });
+}
+
+/* ---------- 決算表 ---------- */
+let SAMPLE=null, curTurn=0;
+function drawTable(){
+  if(!SAMPLE)return;
+  const g=SAMPLE, host=$('#tblBody');
+  const sel='<div class="turnsel">'+g.log.map((l,i)=>
+    '<button data-t="'+i+'" aria-pressed="'+(i===curTurn)+'">'+l.turn+'期</button>').join('')+'</div>';
+  const l=g.log[curTurn];
+  const ev=l.ev?'<p class="evt">◆ 今期のイベント：'+l.ev+'</p>':'';
+  const H=['店（戦略）','価格','ﾄｯﾋﾟﾝｸﾞ','宣伝費','訴求','こってり','仕入','第一希望','販売','ｼｪｱ','売上','当期損益','現金','借入','在庫','純資産'];
+  let rows='';
+  l.rows.forEach((r,j)=>{
+    const idx=ARCHETYPES.findIndex(a=>a.name===r.name);
+    rows+='<tr><td><span class="swatch" style="background:'+SERIES[idx<0?j:idx]+'"></span>'+r.name+(r.stores>1?' <small>(2店)</small>':'')+'</td>'+
+      [r.price,r.top,r.ad].map(v=>'<td class="num">'+v.toLocaleString('ja-JP')+'</td>').join('')+
+      '<td class="num">'+MESSAGES[r.msg].short+'</td>'+
+      [r.rich,r.bought,r.demand,r.sold].map(v=>'<td class="num">'+v.toLocaleString('ja-JP')+'</td>').join('')+
+      '<td class="num">'+(100*r.share).toFixed(1)+'</td>'+
+      ['rev','profit','cash','debt'].map(k=>'<td class="num'+(r[k]<0?' neg':'')+'">'+yen(r[k])+'</td>').join('')+
+      '<td class="num">'+r.inv+'</td>'+
+      '<td class="num'+(r.nav<0?' neg':'')+'"><b>'+yen(r.nav)+'</b></td></tr>';
+  });
+  host.innerHTML=sel+ev+'<div class="scroll"><table><thead><tr>'+H.map(x=>'<th>'+x+'</th>').join('')+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<p class="cap">公開情報は<b>価格・訴求・店舗数・シェア</b>の4つ。宣伝費・トッピング費・こってり度・現金は非公開で、競合調査を買うと分かります。<br>第一希望＝最初にその店を選んだ客数。これが仕入＋在庫を超えると品切れで、あふれた客は他店へ流れます。逆に他店の品切れで客が流入すると、販売が第一希望を上回ります。</p>';
+  host.querySelectorAll('.turnsel button').forEach(b=>b.onclick=()=>{curTurn=+b.dataset.t; drawTable();});
+}
+
+/* ---------- 診断 ---------- */
+function diagnose(acc,P,g){
+  const out=[];
+  const wr=ARCHETYPES.map((a,i)=>acc.appear[i]?100*acc.wins[i]/acc.appear[i]:null);
+  const exp=100/P.players;
+  const named=ARCHETYPES.map((a,i)=>({n:a.name,w:wr[i]})).filter(o=>o.w!==null).sort((a,b)=>b.w-a.w);
+  const top=named[0], bot=named[named.length-1];
+
+  if(top.w>exp*2.4) out.push(['warn','戦略の偏り',
+    `「${top.n}」の勝率 ${top.w.toFixed(0)}% が期待値 ${exp.toFixed(0)}% の2.4倍を超えています。この戦略が正解として固定されると、学生は初回で気づいて以降は考えなくなります。`,
+    'この戦略が使う資源（宣伝関連の効きの強さ、または価格評価が0になる額）を高くして、効きを鈍らせてください。']);
+  else out.push(['ok','戦略の分散',
+    `最も強い「${top.n}」で ${top.w.toFixed(0)}%、期待値は ${exp.toFixed(0)}%。突出した必勝法はありません。`,'']);
+
+  const zero=named.filter(o=>o.w<exp*0.25);
+  if(zero.length) out.push(['warn','勝ち目のない戦略',
+    `${zero.map(o=>o.n).join('・')} の勝率が期待値の1/4未満です。この路線を選んだ店は序盤で詰みます。`,
+    '「薄利多売」が該当する場合は、原価と価格下限が同額（どちらも '+P.cost+'円）で粗利が出ない構造が原因です。下限を原価の1.1倍程度まで上げるか、原価を下げてください。']);
+
+  const bl=100*acc.below/acc.belowN;
+  if(bl>75) out.push(['warn','全員が損をする',
+    `終了時に初期現金を下回った店が ${bl.toFixed(0)}%。ほぼ全店が「負け方の巧拙」を競う展開になります。`,
+    '1人あたり住人数を増やすか、固定費（人件費＋販管費 現在'+((P.labor+P.sga)).toLocaleString('ja-JP')+'円）を下げてください。']);
+  else if(bl<15) out.push(['warn','誰も損をしない',
+    `初期現金を下回った店が ${bl.toFixed(0)}% しかありません。何をしても黒字なら、財務判断の緊張感が生まれません。`,
+    '住人数を減らすか固定費を上げて、損益分岐点を意識させてください。']);
+  else out.push(['ok','勝敗の緊張感',`${bl.toFixed(0)}% の店が初期現金を割り込みました。伸ばす店と沈む店が両方出ています。`,'']);
+
+  const so=100*acc.soldOut/acc.soldOutN;
+  if(so<8) out.push(['warn','品切れが起きない',
+    `完売した店は ${so.toFixed(0)}% だけ。仕入数を考える意味が薄い状態です。`,
+    '仕入上限を下げるか住人数を増やして、機会損失が起きる余地を作ってください。']);
+  else if(so>55) out.push(['warn','品切れが常態化',
+    `${so.toFixed(0)}% の店が完売しています。作れば売れるので、価格や味の判断が結果に出ません。`,
+    '仕入上限を上げるか住人数を減らしてください。']);
+  else out.push(['ok','需給のバランス',`完売率 ${so.toFixed(0)}%。仕入不足と売れ残りが両方起きています。`,'']);
+
+  const di=ARCHETYPES.findIndex(a=>a.id==='data');
+  if(acc.appear[di]){
+    const dw=wr[di], avg=named.reduce((s,o)=>s+o.w,0)/named.length;
+    const totalRes=P.res2+(P.turns-1)*P.res1+Math.floor((P.turns)/2)*P.resRival;
+    if(dw<avg*0.7) out.push(['warn','調査が割に合わない',
+      `「調査重視」の勝率 ${dw.toFixed(0)}% は全体平均 ${avg.toFixed(0)}% を大きく下回ります。データを買う店が損をするなら、分析力を鍛えるという設計目的が成立しません。`,
+      `このAIは全期間で約 ${totalRes.toLocaleString('ja-JP')}円 を調査に投じています。1期の固定費 ${(P.labor+P.sga).toLocaleString('ja-JP')}円 と比べて重すぎないか確認してください。`]);
+    else if(dw>avg*1.5) out.push(['warn','調査が強すぎる',
+      `「調査重視」の勝率 ${dw.toFixed(0)}% が平均 ${avg.toFixed(0)}% の1.5倍超。調査を買えば勝てるだけのゲームになりかけています。`,
+      '調査費を上げるか、標本数を減らして推定誤差を残してください。']);
+    else out.push(['ok','情報の価格',`「調査重視」の勝率 ${dw.toFixed(0)}%（平均 ${avg.toFixed(0)}%）。調査費がおおむね実力に見合っています。`,'']);
+  }
+
+  const rich=acc.richArr, m=rich.reduce((a,b)=>a+b,0)/rich.length;
+  const sd=Math.sqrt(rich.reduce((a,b)=>a+(b-m)*(b-m),0)/rich.length);
+  if(sd<9) out.push(['warn','差別化が起きていない',
+    `各店のこってり度が平均${m.toFixed(0)}・標準偏差${sd.toFixed(1)}に収束しています。全店が同じ味に寄れば、価格と宣伝だけの勝負です。`,
+    '「味のズレへの厳しさ」を上げると、山から離れた位置に立つ不利が大きくなり、住み分けが起きます。']);
+  else out.push(['info','味の住み分け',`こってり度の標準偏差 ${sd.toFixed(1)}（平均 ${m.toFixed(0)}）。各店が別の位置を取っています。`,'']);
+
+  const dead=acc.dead.reduce((a,b)=>a+b,0), deadR=100*dead/acc.belowN;
+  if(deadR>25) out.push(['warn','破綻が多すぎる',
+    `借入枠を使い切って動けなくなった店が ${deadR.toFixed(0)}%。序盤の一手で残りのターンが消化試合になります。`,
+    '借入枠の基礎額を上げるか、初期現金を増やしてください。']);
+
+  const mc=acc.msgCount, mt=mc.reduce((a,b)=>a+b,0)||1;
+  const unused=MESSAGES.filter((m,i)=>mc[i]/mt<0.06);
+  out.push([unused.length?'info':'ok','宣伝の訴求内容',
+    MESSAGES.map((m,i)=>m.name+' '+(100*mc[i]/mt).toFixed(0)+'%').join('　'),
+    unused.length?'「'+unused.map(m=>m.name).join('・')+'」を誰も使っていません。訴求内容は公開情報なので、空席は学生から見えます。ここを取りにいく判断が読み合いになります。':'訴求が4つに分散しています。混んだ訴求を避ける読み合いが働いています。']);
+
+  const gate = P.awareMax / P.awareBase;
+  out.push([gate>3?'warn':'info','認知の格差',
+    `宣伝ゼロの店は消費者の ${(100*P.awareBase).toFixed(0)}%、上限まで宣伝した店は ${(100*P.awareMax).toFixed(0)}% の検討対象に入ります（${gate.toFixed(1)}倍）。`,
+    gate>3?'認知は「選ばれる前の関門」なので、この差が3倍を超えると、宣伝を絞った店は価格や味で何をしても勝てなくなります。宣伝ゼロでの認知率を上げるか、認知率の上限を下げて差を縮めてください。':'']);
+
+  const F=P.labor+P.sga;
+  const fu=q=>Math.round(F/q);
+  out.push(['info','規模の経済の効き方',
+    `固定費 ${F.toLocaleString('ja-JP')}円 の1食あたり負担は 100食で${fu(100)}円、400食で${fu(400)}円、800食で${fu(800)}円、上限${P.buyCap}食で${fu(P.buyCap)}円。`,
+    `400食を超えると1食あたり ${fu(400)-fu(800)}円 しか下がらず、規模の利益はここでほぼ尽きます。${P.scaleDisc>0?'数量割引を'+(100*P.scaleDisc).toFixed(0)+'%まで入れている状態です。大きくすると拡大戦略が一人勝ちしやすくなります。':'仕入の数量割引は現在オフです。'}`]);
+
+  out.push(['info','平均販売価格',`${Math.round(acc.priceSum/acc.priceN).toLocaleString('ja-JP')}円（原価${P.cost}円）。粗利は1食あたり平均 ${Math.round(acc.priceSum/acc.priceN)-P.cost}円で、固定費 ${(P.labor+P.sga).toLocaleString('ja-JP')}円 を賄うには1期 ${Math.ceil((P.labor+P.sga)/Math.max(1,Math.round(acc.priceSum/acc.priceN)-P.cost))} 食が必要です。`,'']);
+
+  $('#dxBody').innerHTML = out.map(([k,t,b,s])=>
+    '<div class="dx '+k+'"><b>'+(k==='warn'?'要調整':k==='ok'?'良好':'参考')+'</b><p><strong>'+t+'</strong>　'+b+(s?'<span>→ '+s+'</span>':'')+'</p></div>').join('');
+}
+
+/* ---------- 実行 ---------- */
+function run(){
+  const P=readParams();
+  const btn=$('#run'); btn.disabled=true; btn.textContent='計 算 中';
+  const rng=makeRng(P.seed>>>0), acc=newAcc();
+  const t0=performance.now();
+  let done=0;
+  const step=()=>{
+    const chunk=Math.max(5,Math.min(40,Math.ceil(P.runs/25)));
+    const to=Math.min(P.runs,done+chunk);
+    runBatch(P,done,to,acc,rng); done=to;
+    $('#prog').style.width=(100*done/P.runs)+'%';
+    $('#stat').textContent=done+' / '+P.runs+' 試行';
+    if(done<P.runs){ setTimeout(step,0); return; }
+    const ms=Math.round(performance.now()-t0);
+    $('#stat').textContent=P.runs+' 試行 ／ '+ms+' ms ／ 住人 '+(P.players*P.popPer).toLocaleString('ja-JP')+'人';
+    SAMPLE=playGame(P,makeRng(P.seed>>>0),pickArchetypes(P.players,makeRng((P.seed>>>0)+7)),true);
+    curTurn=SAMPLE.log.length-1;
+    diagnose(acc,P,SAMPLE); drawWin(acc,P); drawMap(SAMPLE,P); drawNav(SAMPLE,P); drawTable();
+    btn.disabled=false; btn.textContent='対 戦 を 実 行';
+    LAST={acc,P};
+  };
+  setTimeout(step,10);
+}
+let LAST=null;
+buildRail();
+$('#run').onclick=run;
+$('#reset').onclick=()=>{buildRail();};
+addEventListener('resize',()=>{ if(LAST&&SAMPLE){drawWin(LAST.acc,LAST.P);drawMap(SAMPLE,LAST.P);drawNav(SAMPLE,LAST.P);} });
+</script>
+</body>
+</html>

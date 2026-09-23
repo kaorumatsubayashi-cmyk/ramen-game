@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ラーメン経営ゲーム｜作戦シミュレーター</title>
+<style>
+:root{
+  --ink:#16233D; --ink-2:#3C4A66; --ink-3:#6B7893;
+  --paper:#E4E7EB; --surface:#FCFCFB; --rule:#C6CCD5; --rule-soft:#DFE3E9;
+  --gold:#B8890E; --gold-soft:#F5EBD2; --alert:#A0322A; --good:#1F6B4F;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",serif;
+  --gothic:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,"Noto Sans JP","Helvetica Neue",Arial,sans-serif;
+  --mono:"SFMono-Regular",Menlo,Consolas,"Roboto Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--gothic);font-size:14px;line-height:1.7;
+  -webkit-font-smoothing:antialiased;font-feature-settings:"palt" 1}
+h1,h2{font-family:var(--mincho);font-weight:600;letter-spacing:.04em;margin:0}
+header{background:var(--ink);color:#EDEFF3;padding:22px 20px 18px;border-bottom:3px solid var(--gold)}
+.hw{max-width:1180px;margin:0 auto}
+header h1{font-size:23px;color:#fff;letter-spacing:.08em}
+header h1 .t{display:block;font-family:var(--gothic);font-weight:400;font-size:11.5px;
+  letter-spacing:.2em;color:var(--gold-soft);margin-bottom:5px}
+header p{margin:7px 0 0;color:#A9B4C9;font-size:12.5px;max-width:64ch}
+main{max-width:1180px;margin:0 auto;padding:20px 14px 60px}
+section{background:var(--surface);border:1px solid var(--rule);margin-bottom:16px}
+section>h2{font-size:14.5px;padding:11px 16px 10px;border-bottom:1px solid var(--rule-soft);
+  display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+section>h2 em{font-style:normal;font-family:var(--gothic);font-size:11.5px;color:var(--ink-3);letter-spacing:0}
+.b{padding:14px 16px 16px}
+details>summary{cursor:pointer;padding:11px 16px;font-family:var(--mincho);font-size:14.5px;
+  list-style:none;display:flex;justify-content:space-between;align-items:center;letter-spacing:.06em}
+details>summary::-webkit-details-marker{display:none}
+details>summary::after{content:"＋";color:var(--ink-3);font-size:12px}
+details[open]>summary{border-bottom:1px solid var(--rule-soft);background:#F2F3F1}
+details[open]>summary::after{content:"−"}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:820px){.g2,.g3,.g4{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.g2,.g3,.g4{grid-template-columns:1fr}}
+.split{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}
+@media(max-width:880px){.split{grid-template-columns:1fr}}
+label.fl{display:block;font-size:12px;color:var(--ink-2);margin-bottom:3px}
+label.fl small{color:var(--ink-3);font-size:11px;display:block;line-height:1.4}
+input[type=number],input[type=text],select,textarea{
+  width:100%;font-family:var(--mono);font-size:13.5px;padding:6px 8px;border:1px solid var(--rule);
+  border-radius:2px;background:#fff;color:var(--ink)}
+input[type=number]{text-align:right}
+select{font-family:var(--gothic);text-align:left}
+textarea{font-size:12px;line-height:1.5;min-height:110px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold)}
+input[type=range]{width:100%;accent-color:var(--ink);margin:2px 0 0}
+.fld{margin-bottom:11px}
+.rowv{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.rowv b{font-family:var(--mono);font-size:15px}
+button{font-family:var(--gothic);cursor:pointer;border-radius:2px}
+.btn{background:var(--ink);color:#fff;border:none;padding:10px 16px;font-size:13.5px;letter-spacing:.08em}
+.btn:hover{background:#243456}
+.gh{background:none;border:1px solid var(--rule);color:var(--ink-2);padding:7px 12px;font-size:12.5px}
+.gh:hover{border-color:var(--ink-3)}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:5px 7px;border-bottom:1px solid var(--rule-soft);text-align:right}
+th{font-size:10.5px;color:var(--ink-3);font-weight:600;border-bottom:1px solid var(--rule);letter-spacing:.03em}
+td:first-child,th:first-child{text-align:left}
+td input,td select{padding:3px 5px;font-size:12px}
+.scroll{overflow-x:auto}
+canvas{display:block;width:100%}
+.cap{font-size:11.5px;color:var(--ink-3);margin:8px 0 0;line-height:1.6}
+/* 予測パネル */
+.hero{background:var(--ink);color:#fff;padding:16px 18px;margin:-14px -16px 14px;
+  display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:end}
+.hero .k{font-size:11px;color:#9FADC6;letter-spacing:.06em}
+.hero .v{font-family:var(--mono);font-size:30px;line-height:1.15;color:#fff}
+.hero .v small{font-size:13px;color:#B7C2D6}
+.hero .ci{font-family:var(--mono);font-size:11.5px;color:var(--gold-soft)}
+.pl{width:100%;font-size:13px}
+.pl td{border:none;padding:3px 0;font-family:var(--mono)}
+.pl td:first-child{font-family:var(--gothic);color:var(--ink-2)}
+.pl tr.sum td{border-top:1px solid var(--rule);padding-top:6px;font-weight:700}
+.pl tr.sub td{color:var(--ink-3);font-size:12px}
+.neg{color:var(--alert)}
+.pos{color:var(--good)}
+.note{font-size:12px;padding:8px 11px;border-left:3px solid var(--gold);background:#FBF6E9;margin:10px 0 0}
+.note.warn{border-color:var(--alert);background:#FBEFEE}
+.code{font-family:var(--mono);font-size:12.5px;word-break:break-all;background:#F2F3F1;
+  border:1px solid var(--rule);padding:10px;border-radius:2px;line-height:1.6}
+.pill{display:inline-block;font-size:11px;font-family:var(--mono);padding:1px 7px;border:1px solid var(--rule);
+  border-radius:9px;color:var(--ink-3);margin-left:6px}
+.msgpick{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+@media(max-width:520px){.msgpick{grid-template-columns:1fr 1fr}}
+.msgpick button{border:1px solid var(--rule);background:#fff;padding:8px 3px;font-size:12px;color:var(--ink-2);line-height:1.35}
+.msgpick button b{display:block;font-size:13px;color:var(--ink)}
+.msgpick button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#C8D2E4}
+.msgpick button[aria-pressed=true] b{color:#fff}
+</style>
+</head>
+<body>
+<header><div class="hw">
+  <h1><span class="t">RAMEN BUSINESS GAME ／ PLAYER CONSOLE</span>作戦シミュレーター</h1>
+  <p>今期の仕入・価格・トッピング・宣伝・訴求を決めるための試算画面です。予測は<strong>手元の市場調査データだけ</strong>から計算しているので、標本が少なければ外れます。幅を見ながら決めてください。</p>
+</div></header>
+
+<main>
+  <!-- 状況 -->
+  <section><h2>いまの状況 <em>ゲームマスターから配られた決算値を入れてください</em></h2>
+    <div class="b"><div class="grid g4" id="stateBox"></div></div>
+  </section>
+
+  <!-- 市場調査 -->
+  <section><h2>市場調査データ <em>この標本から需要を推定します</em></h2>
+    <div class="b">
+      <div class="split">
+        <div>
+          <label class="fl" for="raw">調査結果を貼り付け
+            <small>1行1人。「価格順位, 宣伝順位, 味覚順位, 理想こってり度」の4列（先頭にID列があっても可）。Excelからそのままコピーできます。</small></label>
+          <textarea id="raw" spellcheck="false" placeholder="1,3,2,68&#10;2,1,3,41&#10;3,2,1,77"></textarea>
+          <div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap">
+            <button class="gh" id="demo20">練習用に20人分つくる</button>
+            <button class="gh" id="demo200">200人分つくる</button>
+          </div>
+          <div id="sampleStat" class="cap"></div>
+        </div>
+        <div>
+          <canvas id="cHist" height="255"></canvas>
+          <p class="cap">手元の標本から見た「味の好み」の地形と自店の位置。標本が少ないほどガタガタになり、本当の山がどこか分からなくなります。</p>
+        </div>
+      </div>
+      <div id="mixBox"></div>
+    </div>
+  </section>
+
+  <!-- 他店 -->
+  <section><h2>他店の想定 <em>価格・訴求・店舗数は公開情報。宣伝費とトッピングとこってり度は想定値です</em></h2>
+    <div class="b">
+      <div class="scroll"><table id="rivalTbl"></table></div>
+      <div style="display:flex;gap:7px;margin-top:10px">
+        <button class="gh" id="addRival">＋ 他店を追加</button>
+        <button class="gh" id="delRival">− 減らす</button>
+      </div>
+      <div class="note">灰色の列は<strong>本当は見えない値</strong>です。ここに何を入れるかで予測は変わります。外れたと思ったら、前期の実績シェアと突き合わせて想定を直してください。競合調査を買えば実際の値が分かります。</div>
+    </div>
+  </section>
+
+  <!-- 決定と予測 -->
+  <section><h2>今期の決定 <em>動かすとすぐ予測に反映されます</em></h2>
+    <div class="b"><div class="split">
+      <div id="decBox"></div>
+      <div id="predBox"></div>
+    </div></div>
+  </section>
+
+  <!-- 感度 -->
+  <section><h2>販売価格を変えたら <em>他の条件はそのままで価格だけ動かした場合の予測</em></h2>
+    <div class="b"><canvas id="cSens" height="270"></canvas>
+      <p class="cap">縦線が現在の設定価格。ただしこれは<strong>他店が今の想定どおり動かない場合</strong>の話です。山の頂上がいつも高値側に来るのは、値上げしても他店が追随しない前提だから。全員が同じ理屈で値上げすれば、この山は崩れます。</p>
+    </div>
+  </section>
+
+  <!-- 提出 -->
+  <section><h2>提出 <em>この行をゲームマスターに送ってください</em></h2>
+    <div class="b">
+      <div class="code" id="submit"></div>
+      <div style="display:flex;gap:7px;margin-top:10px"><button class="btn" id="copy">コピーする</button></div>
+    </div>
+  </section>
+
+  <!-- 設定 -->
+  <section><details><summary>ゲームの共通設定 <span class="pill">GMの設定と合わせること</span></summary>
+    <div class="b"><div class="grid g4" id="cfgBox"></div>
+      <div class="note">ここがGMの「設定」タブと違っていると、予測はいくら精密でも当たりません。初回に必ず読み合わせてください。</div>
+    </div>
+  </details></section>
+</main>
+
+<script>
+/* ===== 共通設定（GMのバランス検証器と同じ既定値） ===== */
+const CFG = {
+  players:6, popPer:600, cost:300, priceFloor:300, priceRef:800,
+  labor:20000, sga:10000, buyCap:1500, buyCapBroke:200,
+  tasteSens:1.4, tau:0.15, topK:80,
+  awareBase:0.25, awareMax:0.97, awareK:35000, buzzK:15000, storeBonus:0.10,
+  msgStrong:1.60, msgWeak:0.55, msgBonus:0.06,
+  rate:0.05, creditBase:300000, creditMult:1.0, storeCost:200000
+};
+const CFG_FIELDS = [
+  ['players','参加店舗数'],['popPer','1店あたり住人数'],['cost','原材料費'],['priceFloor','価格の下限'],
+  ['priceRef','価格評価が0になる額'],['labor','人件費'],['sga','販管費'],['buyCap','仕入上限'],
+  ['tasteSens','味のズレへの厳しさ'],['tau','選択のゆらぎ'],['topK','トッピングの効き'],
+  ['awareBase','宣伝ゼロの認知率'],['awareMax','認知率の上限'],['awareK','宣伝の効き(認知)'],
+  ['buzzK','宣伝の効き(話題)'],['storeBonus','2号店の認知加算'],
+  ['msgStrong','訴求が刺さる層への倍率'],['msgWeak','それ以外への倍率'],['msgBonus','訴求の好感度'],
+  ['rate','金利'],['creditBase','借入枠の基礎'],['creditMult','剰余金による上乗せ'],['storeCost','出店費用']
+];
+const MESSAGES = [
+  {n:'認知拡大',h:'広く浅く'},{n:'安さ訴求',h:'価格志向へ'},
+  {n:'話題性訴求',h:'宣伝志向へ'},{n:'味わい訴求',h:'味覚志向へ'}
+];
+const ST = { turn:1, cash:500000, debt:0, inv:0, retained:0, stores:1 };
+const DEC = { buy:600, price:500, top:80, ad:35000, msg:0, research:0, rival:0, open:0 };
+const RIVALS = [];
+let SAMPLE = [];   // {r:[価格順位,宣伝順位,味覚順位], first:0|1|2, ideal:0-100}
+
+const $=s=>document.querySelector(s);
+const yen=v=>(v<0?'−':'')+Math.abs(Math.round(v)).toLocaleString('ja-JP');
+const RW=[0.6,0.3,0.1];
+
+/* ===== 乱数（試算は毎回同じ結果になるよう固定シード） ===== */
+function rngFactory(seed){let a=seed>>>0;return()=>{a|=0;a=(a+0x6D2B79F5)|0;
+  let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;
+  return((t^(t>>>14))>>>0)/4294967296;};}
+
+/* ===== 需要の推定 ===== */
+function offerOf(o){
+  return {
+    pu: Math.min(1,(CFG.priceRef-o.price)/(CFG.priceRef-CFG.priceFloor)),
+    au: o.ad/(o.ad+CFG.buzzK),
+    tu: o.top/(o.top+CFG.topK),
+    sn: CFG.tasteSens*(o.stores>1?0.55:1)/100,
+    rich: o.rich, msg: o.msg,
+    gain: (1-CFG.awareBase)*(o.ad/(o.ad+CFG.awareK)),
+    bonus: CFG.storeBonus*(o.stores-1)
+  };
+}
+function awareOf(f,first){
+  const mf = f.msg===0?1:(f.msg-1===first?CFG.msgStrong:CFG.msgWeak);
+  let p = CFG.awareBase + f.gain*mf + f.bonus;
+  return p>CFG.awareMax?CFG.awareMax:p;
+}
+function utilOf(f,c){
+  let d=c.ideal-f.rich; if(d<0)d=-d;
+  const w=[RW[c.r[0]],RW[c.r[1]],RW[c.r[2]]];
+  let u=w[0]*f.pu + w[1]*f.au + w[2]*(f.tu - f.sn*d);
+  if(f.msg!==0 && f.msg-1===c.first) u+=CFG.msgBonus*f.au;
+  return u;
+}
+// 標本の各人が自店を選ぶ確率をモンテカルロで出す
+function winProbs(mine,rivals,reps){
+  const rng=rngFactory(20260813);
+  const fm=offerOf(mine), fr=rivals.map(offerOf);
+  const out=new Float64Array(SAMPLE.length);
+  const gm=new Float64Array(4096);
+  for(let i=0;i<4096;i++) gm[i]=CFG.tau*(-Math.log(-Math.log(Math.max(1e-9,rng()))));
+  let gi=0;
+  for(let i=0;i<SAMPLE.length;i++){
+    const c=SAMPLE[i];
+    const am=awareOf(fm,c.first), um=utilOf(fm,c);
+    const ar=fr.map(f=>awareOf(f,c.first)), ur=fr.map(f=>utilOf(f,c));
+    let hit=0;
+    for(let k=0;k<reps;k++){
+      const seen = rng()<am;
+      let best=-1e9, mine_=-1e9;
+      if(seen) mine_=um+gm[gi=(gi+1)&4095];
+      for(let r=0;r<fr.length;r++) if(rng()<ar[r]){
+        const g=ur[r]+gm[gi=(gi+1)&4095];
+        if(g>best)best=g;
+      }
+      if(seen && mine_>=best) hit++;
+      else if(!seen && best<-1e8) hit+=1/(fr.length+1); // 誰も知らない客はランダムに入店
+    }
+    out[i]=hit/reps;
+  }
+  return out;
+}
+function quantile(a,q){const b=a.slice().sort((x,y)=>x-y);const i=(b.length-1)*q;
+  const lo=Math.floor(i),hi=Math.ceil(i);return b[lo]+(b[hi]-b[lo])*(i-lo);}
+
+function estimate(){
+  const n=SAMPLE.length;
+  if(!n) return null;
+  const pop=CFG.players*CFG.popPer;
+  const mine={price:DEC.price,top:DEC.top,ad:DEC.ad,msg:DEC.msg,rich:DEC.rich,stores:ST.stores+(DEC.open?1:0)};
+  const p=winProbs(mine,RIVALS,140);
+  let m=0; for(let i=0;i<n;i++)m+=p[i]; m/=n;
+  // ブートストラップで標本誤差の幅を出す
+  const rng=rngFactory(777), B=400, boot=new Float64Array(B);
+  for(let b=0;b<B;b++){let s=0;for(let i=0;i<n;i++)s+=p[Math.floor(rng()*n)];boot[b]=s/n;}
+  return {
+    share:m, lo:quantile(boot,0.10), hi:quantile(boot,0.90),
+    demand:m*pop, dlo:quantile(boot,0.10)*pop, dhi:quantile(boot,0.90)*pop, pop
+  };
+}
+
+// 他店の想定が外れたときに需要がどこまで振れるか
+function assumptionRisk(){
+  if(!SAMPLE.length||!RIVALS.length) return null;
+  const rng=rngFactory(12345), S=11, pop=CFG.players*CFG.popPer;
+  const mine={price:DEC.price,top:DEC.top,ad:DEC.ad,msg:DEC.msg,rich:DEC.rich,stores:ST.stores+(DEC.open?1:0)};
+  const arr=[];
+  for(let k=0;k<S;k++){
+    const rv=RIVALS.map(r=>({name:r.name,price:r.price,msg:r.msg,stores:r.stores,
+      ad:Math.max(0,r.ad*(0.4+1.2*rng())),
+      top:Math.max(0,r.top*(0.5+1.0*rng())),
+      rich:Math.max(0,Math.min(100,r.rich+(rng()-0.5)*44))}));
+    const pr=winProbs(mine,rv,70);
+    let m=0;for(let i=0;i<pr.length;i++)m+=pr[i];
+    arr.push(m/pr.length*pop);
+  }
+  arr.sort((a,b)=>a-b);
+  return {lo:arr[1],hi:arr[S-2]};
+}
+
+/* ===== 収支 ===== */
+function pnl(demand){
+  const stores=ST.stores+(DEC.open?1:0);
+  const stock=ST.inv+DEC.buy;
+  const sold=Math.min(Math.round(demand),stock);
+  const rev=sold*DEC.price;
+  const cogs=sold*CFG.cost;
+  const topc=sold*DEC.top;
+  const fixed=stores*(CFG.labor+CFG.sga);
+  const res=DEC.research+ (DEC.rival?RES.rival:0);
+  const openc=DEC.open?CFG.storeCost:0;
+  const interest=Math.round(ST.debt*CFG.rate);
+  const profit=rev-cogs-topc-fixed-interest-DEC.ad-res-openc;
+  const out=DEC.buy*CFG.cost+DEC.ad+res+openc;
+  const inFlow=rev-topc-fixed-interest;
+  let cash=ST.cash-out+inFlow, debt=ST.debt;
+  const limit=CFG.creditBase+Math.max(0,ST.retained)*CFG.creditMult;
+  if(cash<0){const draw=Math.min(-cash,Math.max(0,limit-debt));debt+=draw;cash+=draw;}
+  const margin=DEC.price-CFG.cost-DEC.top;
+  return {sold,stock,rev,cogs,topc,fixed,res,openc,interest,profit,cash,debt,
+    inv:stock-sold, limit, broke:cash<0, margin,
+    be: margin>0 ? Math.ceil((fixed+interest+DEC.ad+res)/margin) : null,
+    nav: cash + (stock-sold)*CFG.cost*0.5 - debt};
+}
+const RES={rival:25000};
+
+/* ===== 画面の組み立て ===== */
+function num(id,val,step,attrs){return '<input type="number" id="'+id+'" value="'+val+'" step="'+(step||1)+'" '+(attrs||'')+'>';}
+function buildState(){
+  const F=[['turn','今期','期'],['cash','現金','円'],['debt','借入残高','円'],
+           ['inv','繰越在庫','食'],['retained','利益剰余金','円'],['stores','店舗数','店']];
+  $('#stateBox').innerHTML=F.map(([k,l,u])=>
+    '<div class="fld"><label class="fl" for="s_'+k+'">'+l+'<small>'+u+'</small></label>'+num('s_'+k,ST[k])+'</div>').join('');
+  F.forEach(([k])=>$('#s_'+k).oninput=e=>{ST[k]=+e.target.value||0;refresh();});
+}
+function buildCfg(){
+  $('#cfgBox').innerHTML=CFG_FIELDS.map(([k,l])=>
+    '<div class="fld"><label class="fl" for="c_'+k+'">'+l+'</label>'+num('c_'+k,CFG[k],'any')+'</div>').join('');
+  CFG_FIELDS.forEach(([k])=>$('#c_'+k).oninput=e=>{CFG[k]=+e.target.value;buildRivals();refresh();});
+}
+function buildRivals(){
+  while(RIVALS.length<CFG.players-1) RIVALS.push({name:'他店'+(RIVALS.length+1),price:500,msg:0,stores:1,ad:35000,top:80,rich:50});
+  while(RIVALS.length>CFG.players-1) RIVALS.pop();
+  const H=['店名','価格 <span style="color:#B8890E">公開</span>','訴求 <span style="color:#B8890E">公開</span>',
+           '店舗 <span style="color:#B8890E">公開</span>','宣伝費 <i>想定</i>','ﾄｯﾋﾟﾝｸﾞ <i>想定</i>','こってり <i>想定</i>'];
+  $('#rivalTbl').innerHTML='<thead><tr>'+H.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+
+    RIVALS.map((r,i)=>'<tr>'+
+      '<td><input type="text" id="rn'+i+'" value="'+r.name+'" style="width:88px;text-align:left"></td>'+
+      '<td>'+num('rp'+i,r.price,10,'style="width:76px"')+'</td>'+
+      '<td><select id="rm'+i+'">'+MESSAGES.map((m,k)=>'<option value="'+k+'"'+(r.msg===k?' selected':'')+'>'+m.n+'</option>').join('')+'</select></td>'+
+      '<td>'+num('rs'+i,r.stores,1,'style="width:50px"')+'</td>'+
+      '<td>'+num('ra'+i,r.ad,5000,'style="width:86px"')+'</td>'+
+      '<td>'+num('rt'+i,r.top,10,'style="width:64px"')+'</td>'+
+      '<td>'+num('rr'+i,r.rich,5,'style="width:64px"')+'</td></tr>').join('')+'</tbody>';
+  RIVALS.forEach((r,i)=>{
+    const bind=(p,k,f)=>{const el=$('#'+p+i); if(el)el.oninput=e=>{r[k]=f(e.target.value);refresh();};};
+    bind('rn','name',v=>v); bind('rp','price',Number); bind('rm','msg',Number);
+    bind('rs','stores',Number); bind('ra','ad',Number); bind('rt','top',Number); bind('rr','rich',Number);
+  });
+}
+function buildDec(){
+  DEC.rich = DEC.rich===undefined?50:DEC.rich;
+  const S=(id,lab,hint,min,max,step)=>
+    '<div class="fld"><div class="rowv"><label class="fl" for="d_'+id+'">'+lab+'<small>'+hint+'</small></label>'+
+    '<b id="v_'+id+'"></b></div><input type="range" id="d_'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+DEC[id]+'">'+
+    '<input type="number" id="n_'+id+'" value="'+DEC[id]+'" step="'+step+'" style="margin-top:4px">'+'</div>';
+  $('#decBox').innerHTML=
+    S('buy','仕入数','食。売れ残りは翌期に繰り越し',0,CFG.buyCap*2,10)+
+    S('price','販売価格','円。下限'+CFG.priceFloor+'円',CFG.priceFloor,1000,10)+
+    S('top','トッピング費','円／食。味覚志向に効く',0,400,10)+
+    S('ad','宣伝費','円。まず知られないと選ばれない',0,250000,5000)+
+    S('rich','こってり度','0=あっさり 100=こってり',0,100,1)+
+    '<div class="fld"><label class="fl">宣伝の訴求内容<small>同じ宣伝費でも届く相手が変わる。他店と被ると食い合う</small></label>'+
+    '<div class="msgpick" id="msgPick">'+MESSAGES.map((m,i)=>
+      '<button data-m="'+i+'" aria-pressed="'+(DEC.msg===i)+'"><b>'+m.n+'</b>'+m.h+'</button>').join('')+'</div></div>'+
+    '<div class="fld"><label class="fl">追加で買うもの</label>'+
+    '<label style="display:block;font-size:12.5px"><input type="checkbox" id="d_rival"'+(DEC.rival?' checked':'')+'> 競合調査 '+yen(RES.rival)+'円（他店の宣伝費・味・トッピングが分かる）</label>'+
+    '<label style="display:block;font-size:12.5px"><input type="checkbox" id="d_open"'+(DEC.open?' checked':'')+'> 2号店を出す '+yen(CFG.storeCost)+'円</label>'+
+    '<label class="fl" style="margin-top:8px" for="d_research">市場調査の追加購入（円）'+
+    '<small>約 '+(1000*CFG.resN1/CFG.res1).toFixed(1)+'人ぶん／1000円。この結果はあなたの店だけに届きます</small></label>'+num('d_research',DEC.research,5000)+'</div>';
+  ['buy','price','top','ad','rich'].forEach(k=>{
+    const r=$('#d_'+k), n=$('#n_'+k);
+    const set=v=>{DEC[k]=+v; r.value=v; n.value=v; refresh();};
+    r.oninput=e=>set(e.target.value); n.oninput=e=>set(e.target.value);
+  });
+  $('#msgPick').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    DEC.msg=+b.dataset.m;
+    $('#msgPick').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+    refresh();});
+  $('#d_rival').onchange=e=>{DEC.rival=e.target.checked?1:0;refresh();};
+  $('#d_open').onchange=e=>{DEC.open=e.target.checked?1:0;refresh();};
+  $('#d_research').oninput=e=>{DEC.research=+e.target.value||0;refresh();};
+}
+
+/* ===== 標本の読み込み ===== */
+function parseSample(txt){
+  const rows=[];
+  txt.split(/\r?\n/).forEach(line=>{
+    const c=line.trim().split(/[\t,;\s]+/).map(Number).filter(v=>!isNaN(v));
+    if(c.length<4)return;
+    const v=c.length>=5?c.slice(1,5):c.slice(0,4);
+    const [a,b,d,ideal]=v;
+    if(![a,b,d].every(x=>x>=1&&x<=3))return;
+    if(new Set([a,b,d]).size!==3)return;
+    const r=[a-1,b-1,d-1];
+    rows.push({r,first:r.indexOf(0),ideal:Math.max(0,Math.min(100,ideal))});
+  });
+  return rows;
+}
+function makeDemo(n){
+  const rng=rngFactory(Date.now()&0xffff);
+  const perms=[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
+  const w=perms.map(()=>0.4+rng()), ws=w.reduce((a,b)=>a+b,0);
+  const cum=[];let c=0;w.forEach(x=>{c+=x/ws;cum.push(c);});
+  const K=1+Math.floor(rng()*2), mu=[],sd=[];
+  for(let k=0;k<K;k++){mu.push(20+rng()*60);sd.push(9+rng()*12);}
+  const out=[];
+  for(let i=0;i<n;i++){
+    const u=rng();let t=0;while(t<5&&u>cum[t])t++;
+    const p=perms[t];
+    const k=Math.floor(rng()*K);
+    let g=0;for(let z=0;z<6;z++)g+=rng();g=(g-3)*1.4;
+    let x=mu[k]+g*sd[k]; if(x<0)x=-x; if(x>100)x=200-x;
+    out.push([p[0]+1,p[1]+1,p[2]+1,Math.round(Math.max(0,Math.min(100,x)))]);
+  }
+  return out.map(r=>r.join(',')).join('\n');
+}
+
+/* ===== 描画 ===== */
+function prep(cv,h){const dpr=devicePixelRatio||1,w=cv.clientWidth||500;
+  cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+'px';
+  const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);x.textBaseline='middle';return{x,w,h};}
+const GO='"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif', MO='"SFMono-Regular",Menlo,monospace';
+
+function drawHist(){
+  const {x,w,h}=prep($('#cHist'),255);
+  const L=8,R=w-8,T=13,B=h-30,PW=R-L;
+  x.fillStyle='#8B95A8';x.font='11px '+GO;x.textAlign='left';
+  if(!SAMPLE.length){x.fillText('調査データを貼り付けてください',L,h/2);return;}
+  const NB=20, bins=new Array(NB).fill(0);
+  SAMPLE.forEach(c=>bins[Math.min(NB-1,Math.floor(c.ideal/100*NB))]++);
+  const mxv=Math.max(...bins)||1;
+  const SELFY=T+6, LANE0=T+21, LH=14, MAXL=6;
+  const px=v=>L+PW*v/100;
+
+  // 1) ラベルの配置を先に決める（段数が決まらないと棒の高さが決められない）
+  x.font='10.5px '+GO;
+  const laneEnd=[];
+  const place=(t,ax)=>{
+    const tw=x.measureText(t).width;
+    let left=ax+5, align='left';
+    if(left+tw>R){ left=ax-5-tw; align='right'; }
+    let ln=0; while(ln<MAXL && laneEnd[ln]!==undefined && left<laneEnd[ln]+7) ln++;
+    if(ln>=MAXL) return null;
+    laneEnd[ln]=left+tw;
+    return {x:ax,t,tw,left,align,y:LANE0+ln*LH,lane:ln};
+  };
+  const plan=[];
+  RIVALS.map(r=>({r,x:px(r.rich)})).sort((a,b)=>a.x-b.x).forEach(o=>{
+    // 入りきらなければ数字だけに切り詰めて必ず置く
+    const got = place(o.r.name+' '+o.r.rich,o.x) || place(String(o.r.rich),o.x);
+    if(got) plan.push(got);
+  });
+  const used=plan.reduce((m,o)=>Math.max(m,o.lane),0)+1;
+  const barTop=LANE0+used*LH;
+
+  // 2) 度数
+  bins.forEach((v,i)=>{
+    const bw=PW/NB, bx=L+i*bw, bh=(B-barTop)*v/mxv;
+    x.fillStyle='rgba(27,58,107,.20)';x.fillRect(bx+1,B-bh,bw-2,bh);
+  });
+
+  // 3) 縦線をまとめて描く
+  x.lineWidth=1;x.strokeStyle='#B4BCC9';x.setLineDash([3,3]);
+  plan.forEach(o=>{x.beginPath();x.moveTo(o.x,o.y-5);x.lineTo(o.x,B);x.stroke();});
+  x.setLineDash([]);
+  const sx=px(DEC.rich);
+  x.strokeStyle='#B8890E';x.lineWidth=2;
+  x.beginPath();x.moveTo(sx,SELFY+6);x.lineTo(sx,B);x.stroke();
+
+  // 4) ラベルは白い下地つきで線の上に置く
+  x.font='10.5px '+GO;x.textAlign='left';
+  plan.forEach(o=>{
+    x.fillStyle='rgba(252,252,251,.93)';x.fillRect(o.left-3,o.y-8,o.tw+6,15);
+    x.fillStyle='#7C8697';x.fillText(o.t,o.left,o.y);
+  });
+  const mt='自店 '+DEC.rich;
+  x.font='bold 11.5px '+GO;
+  const mw=x.measureText(mt).width;
+  const mLeft = sx+6+mw>R ? sx-6-mw : sx+6;
+  x.fillStyle='rgba(252,252,251,.95)';x.fillRect(mLeft-4,SELFY-8,mw+8,16);
+  x.fillStyle='#B8890E';x.fillText(mt,mLeft,SELFY);
+
+  x.strokeStyle='#C6CCD5';x.lineWidth=1;x.beginPath();x.moveTo(L,B);x.lineTo(R,B);x.stroke();
+  x.fillStyle='#6B7893';x.font='10.5px '+MO;
+  x.textAlign='left';x.fillText('0 あっさり',L,B+14);
+  x.textAlign='right';x.fillText('こってり 100',R,B+14);
+}
+
+function drawSens(){
+  const {x,w,h}=prep($('#cSens'),270);
+  const L=68,R=w-14,T=16,B=h-32,PW=R-L,PH=B-T;
+  if(!SAMPLE.length){x.fillStyle='#8B95A8';x.font='11px '+GO;x.fillText('調査データが必要です',L,h/2);return;}
+  const save=DEC.price, pts=[];
+  const lo=CFG.priceFloor, hi=Math.max(CFG.priceFloor+200,Math.min(1500,Math.round(CFG.priceRef*1.6)));
+  for(let p=lo;p<=hi;p+=Math.max(10,Math.round((hi-lo)/26))){
+    DEC.price=p; const e=estimate(); pts.push({p,profit:pnl(e.demand).profit,sold:Math.min(Math.round(e.demand),ST.inv+DEC.buy)});
+  }
+  DEC.price=save;
+  let mn=Infinity,mx=-Infinity;pts.forEach(o=>{if(o.profit<mn)mn=o.profit;if(o.profit>mx)mx=o.profit;});
+  const pad=(mx-mn)*0.15||1e4;mn-=pad;mx+=pad;
+  const X=p=>L+PW*(p-lo)/(hi-lo), Y=v=>B-PH*(v-mn)/(mx-mn);
+  x.strokeStyle='#E7EAEE';x.fillStyle='#8B95A8';x.font='10.5px '+MO;x.textAlign='right';
+  for(let k=0;k<=4;k++){const v=mn+(mx-mn)*k/4,y=Y(v);
+    x.beginPath();x.moveTo(L,y);x.lineTo(R,y);x.stroke();x.fillText(yen(v),L-7,y);}
+  if(0>mn&&0<mx){const zy=Y(0);x.strokeStyle='#C6A6A2';x.setLineDash([4,3]);
+    x.beginPath();x.moveTo(L,zy);x.lineTo(R,zy);x.stroke();x.setLineDash([]);}
+  x.strokeStyle='#1B3A6B';x.lineWidth=2;x.beginPath();
+  pts.forEach((o,i)=>{i?x.lineTo(X(o.p),Y(o.profit)):x.moveTo(X(o.p),Y(o.profit));});x.stroke();
+  const best=pts.reduce((a,b)=>b.profit>a.profit?b:a);
+  const bx=X(best.p), by=Y(best.profit), cx=X(save);
+  // 現在価格の縦線（先に描いて、ラベルは最後にまとめて置く）
+  x.strokeStyle='#B8890E';x.lineWidth=1.5;
+  x.beginPath();x.moveTo(cx,T);x.lineTo(cx,B);x.stroke();
+  x.fillStyle='#1F6B4F';x.beginPath();x.arc(bx,by,4.5,0,7);x.fill();
+  // 枠内に必ず収まるようクランプしてラベルを置く
+  const put=(t,ax,ay,col,bold)=>{
+    x.font=(bold?'bold ':'')+'11px '+GO;
+    const tw=x.measureText(t).width;
+    let lx=Math.max(L+tw/2+2,Math.min(R-tw/2-2,ax));
+    let ly=Math.max(T+8,Math.min(B-8,ay));
+    x.textAlign='center';
+    x.fillStyle='rgba(252,252,251,.92)';x.fillRect(lx-tw/2-3,ly-8,tw+6,16);
+    x.fillStyle=col;x.fillText(t,lx,ly);
+    return {lx,tw,ly};
+  };
+  const bTxt='この標本での最良 '+best.p+'円', cTxt='現在 '+save+'円';
+  x.font='11px '+GO;
+  const bw=x.measureText(bTxt).width, cw=x.measureText(cTxt).width;
+  // 2つのラベルが横に近いときは、最良のほうを点の下側へ逃がす
+  const near=Math.abs(bx-cx) < (bw+cw)/2+10;
+  put(cTxt,cx,T+9,'#B8890E',false);
+  put(bTxt,bx,near?Math.min(B-10,by+20):by-16,'#1F6B4F',true);
+  x.fillStyle='#6B7893';x.font='10.5px '+MO;x.textAlign='center';
+  const tick=(hi-lo)>700?200:100;
+  for(let p=Math.ceil(lo/tick)*tick;p<=hi;p+=tick) x.fillText(p,X(p),B+14);
+}
+
+/* ===== 更新 ===== */
+function refresh(){
+  ['buy','price','top','ad','rich'].forEach(k=>{const el=$('#v_'+k);
+    if(el)el.textContent=(k==='rich'?DEC[k]:yen(DEC[k]))+(k==='buy'?' 食':k==='rich'?'':' 円');});
+  drawHist();
+  const est=estimate();
+  const box=$('#predBox');
+  if(!est){box.innerHTML='<div class="note warn">市場調査データを入れると予測が出ます。</div>';$('#submit').textContent='—';drawSens();return;}
+  const f=pnl(est.demand);
+  const share=100*est.share, fair=100/CFG.players;
+  box.innerHTML=
+    '<div class="hero">'+
+      '<div><div class="k">予測販売数</div><div class="v">'+Math.round(f.sold)+'<small> 食</small></div>'+
+      '<div class="ci">需要の見込み '+Math.round(est.dlo)+'〜'+Math.round(est.dhi)+' 食</div></div>'+
+      '<div><div class="k">予測当期損益</div><div class="v" style="color:'+(f.profit<0?'#E8A19A':'#9FE0C0')+'">'+yen(f.profit)+'</div>'+
+      '<div class="ci">シェア '+share.toFixed(1)+'%（均等なら '+fair.toFixed(1)+'%）</div></div>'+
+    '</div>'+
+    '<table class="pl"><tbody>'+
+    row('売上高',f.rev)+row('　原材料費',-f.cogs,1)+row('　トッピング費',-f.topc,1)+
+    row('　固定費（'+(ST.stores+(DEC.open?1:0))+'店）',-f.fixed,1)+
+    row('　宣伝費',-DEC.ad,1)+ (f.res?row('　調査費',-f.res,1):'')+ (f.openc?row('　出店費用',-f.openc,1):'')+
+    row('　支払利息',-f.interest,1)+
+    '<tr class="sum"><td>当期損益</td><td class="'+(f.profit<0?'neg':'pos')+'">'+yen(f.profit)+'</td></tr>'+
+    '</tbody></table>'+
+    '<table class="pl" style="margin-top:12px"><tbody>'+
+    row('期末現金',f.cash)+row('借入残高',f.debt)+row('　借入枠',f.limit,1)+
+    row('繰越在庫（食）',f.inv)+
+    '<tr class="sum"><td>純資産</td><td>'+yen(f.nav)+'</td></tr></tbody></table>'+
+    notes(f,est);
+  $('#submit').textContent=
+    '第'+ST.turn+'期／仕入'+DEC.buy+'／価格'+DEC.price+'／トッピング'+DEC.top+
+    '／宣伝'+DEC.ad+'／訴求「'+MESSAGES[DEC.msg].n+'」／こってり'+DEC.rich+
+    (DEC.research?'／追加調査'+DEC.research:'')+(DEC.rival?'／競合調査':'')+(DEC.open?'／2号店出店':'');
+  drawSens();
+}
+function row(l,v,sub){return '<tr'+(sub?' class="sub"':'')+'><td>'+l+'</td><td class="'+(v<0?'neg':'')+'">'+yen(v)+'</td></tr>';}
+function notes(f,est){
+  const out=[];
+  if(f.margin<=0) out.push(['warn','1食売るごとに '+yen(-f.margin)+'円 の赤字です。価格が原材料費＋トッピング費を下回っています。']);
+  else if(f.be) out.push(['','1食あたりの粗利は '+yen(f.margin)+'円。固定費と宣伝費を回収するには <strong>'+f.be+'食</strong> 必要です。']);
+  if(est.demand>f.stock*1.05) out.push(['warn','需要が在庫を上回る見込みです。約 '+Math.round(est.demand-f.stock)+'食 を取りこぼします。']);
+  if(f.stock>est.dhi*1.25 && f.stock>0) out.push(['','仕入が多めです。予測の上限でも '+Math.round(f.stock-est.dhi)+'食 余ります。在庫は翌期に持ち越せますが現金は先に出ます。']);
+  const need=DEC.buy*CFG.cost+DEC.ad+f.res+f.openc;
+  if(need>ST.cash+Math.max(0,f.limit-ST.debt)) out.push(['warn','支出 '+yen(need)+'円 が手元現金と借入枠の合計を超えています。この仕入はできません。']);
+  if(DEC.buy>CFG.buyCap*(ST.stores+(DEC.open?1:0))) out.push(['warn','仕入上限（'+CFG.buyCap+'食×店舗数）を超えています。']);
+  if(f.broke) out.push(['warn','借入枠を使い切ります。次期の仕入は '+CFG.buyCapBroke+'食 に制限されます。']);
+  const n=SAMPLE.length, wide=(est.dhi-est.dlo)/Math.max(1,est.demand);
+  if(n<50) out.push(['','標本 '+n+'人 による予測の幅は '+Math.round(est.dlo)+'〜'+Math.round(est.dhi)+'食（±'+Math.round(50*wide)+'%）。調査を増やせばこの幅は狭まります。']);
+  const rk=assumptionRisk();
+  if(rk){
+    const rw=rk.hi-rk.lo, sw=est.dhi-est.dlo;
+    out.push([rw>sw*1.6?'warn':'', '他店の想定が外れた場合、需要は <strong>'+Math.round(rk.lo)+'〜'+Math.round(rk.hi)+'食</strong> まで振れます。'+
+      (rw>sw*1.6 ? '標本の誤差（幅'+Math.round(sw)+'食）よりこちらの方が大きい。調査人数を増やすより、他店の読みを詰めるほうが効きます。'
+                 : '標本の誤差（幅'+Math.round(sw)+'食）と同程度です。')]);
+  }
+  const crowd=RIVALS.filter(r=>r.msg===DEC.msg).length;
+  if(DEC.msg!==0 && crowd>0) out.push(['','同じ「'+MESSAGES[DEC.msg].n+'」を '+crowd+'店 が使う想定です。訴求が被ると同じ客を取り合います。']);
+  return out.map(([k,t])=>'<div class="note'+(k?' '+k:'')+'">'+t+'</div>').join('');
+}
+
+/* ===== 起動 ===== */
+buildCfg(); buildState(); buildRivals(); buildDec();
+$('#raw').oninput=e=>{
+  SAMPLE=parseSample(e.target.value);
+  const c=[0,0,0];SAMPLE.forEach(s=>c[s.first]++);
+  const t=SAMPLE.length||1;
+  const se=p=>100*1.28*Math.sqrt(p*(1-p)/t);
+  $('#sampleStat').innerHTML= SAMPLE.length
+    ? '読み込み <strong>'+SAMPLE.length+'人</strong>　第1志向の推定（80%の幅）：'+
+      ['価格','宣伝','味覚'].map((l,i)=>l+' '+(100*c[i]/t).toFixed(0)+'%±'+se(c[i]/t).toFixed(0)).join('　')
+    : '有効な行がありません。「価格順位, 宣伝順位, 味覚順位, 理想こってり度」の4列で、順位は1〜3の重複なしにしてください。';
+  refresh();
+};
+$('#demo20').onclick=()=>{$('#raw').value=makeDemo(20);$('#raw').dispatchEvent(new Event('input'));};
+$('#demo200').onclick=()=>{$('#raw').value=makeDemo(200);$('#raw').dispatchEvent(new Event('input'));};
+$('#addRival').onclick=()=>{CFG.players++;$('#c_players').value=CFG.players;buildRivals();refresh();};
+$('#delRival').onclick=()=>{if(CFG.players>2){CFG.players--;$('#c_players').value=CFG.players;buildRivals();refresh();}};
+$('#copy').onclick=()=>{const t=$('#submit').textContent;
+  navigator.clipboard?.writeText(t).then(()=>{$('#copy').textContent='コピーしました';
+    setTimeout(()=>$('#copy').textContent='コピーする',1600);},()=>{});};
+addEventListener('resize',()=>{drawHist();drawSens();});
+refresh();
+</script>
+</body>
+</html>

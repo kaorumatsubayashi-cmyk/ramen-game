@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ラーメン店経営ゲーム</title>
+<meta name="description" content="授業で使うラーメン店経営ゲーム。進行コンソール、作戦シミュレーター、壁打ちモード、バランス検証器。">
+<meta name="theme-color" content="#F7F3E8">
+<meta property="og:title" content="ラーメン店経営ゲーム">
+<meta property="og:description" content="進行コンソール、作戦シミュレーター、壁打ちモード、バランス検証器。">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --washi:#F7F3E8; --card:#FDFBF4; --sumi:#2B2A2C; --soft:#58554E; --keshi:#8B877B;
+  --rule:#E1D9C6; --beni:#9A2530; --beni-lt:#C0392F; --matsu:#3F6B4E; --kin:#DEBA81;
+  --fuji:#8E7BB0; --ai:#4E6186;
+  --mincho:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+  --gothic:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--washi);color:var(--sumi);
+  font-family:var(--gothic);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(circle at 10% 4%, rgba(222,186,129,.18), transparent 38%),
+    radial-gradient(circle at 92% 96%, rgba(154,37,48,.08), transparent 42%);
+}
+.wrap{max-width:840px;margin:0 auto;padding:36px 20px 72px}
+header{text-align:center}
+header h1{
+  font-family:var(--mincho);font-weight:800;margin:0;
+  font-size:clamp(26px,6.2vw,40px);letter-spacing:.12em;text-indent:.12em;line-height:1.3;
+}
+header .sub{font-family:var(--mincho);color:var(--beni);margin:10px 0 0;letter-spacing:.12em;text-indent:.12em;font-size:clamp(12px,3.2vw,14px)}
+.kasane{
+  height:7px;border-radius:1px;margin:20px 0 0;
+  background:linear-gradient(to right,
+    var(--matsu) 0 22%, #FBF7EE 22% 30%, var(--kin) 30% 46%,
+    var(--fuji) 46% 54%, #FBF7EE 54% 62%, var(--beni-lt) 62% 100%);
+}
+header .lede{font-size:14px;color:var(--soft);max-width:34em;margin:18px auto 0;text-align:left}
+
+h2{font-family:var(--mincho);font-size:18px;font-weight:600;margin:38px 0 0;letter-spacing:.07em;display:inline-block;border-bottom:2px solid var(--kin);padding-bottom:4px}
+.note{font-size:12.5px;color:var(--keshi);margin:9px 0 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:13px;margin:15px 0 0}
+a.item{
+  display:block;position:relative;overflow:hidden;text-decoration:none;color:inherit;
+  background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:15px 16px 16px 20px;
+  transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease;
+}
+a.item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--kin)}
+a.item.beni::before{background:var(--beni-lt)}
+a.item.matsu::before{background:var(--matsu)}
+a.item.ai::before{background:var(--ai)}
+a.item:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(43,42,44,.10);border-color:var(--keshi)}
+a.item:focus-visible{outline:2px solid var(--fuji);outline-offset:2px}
+a.item .t{font-family:var(--mincho);font-size:18.5px;font-weight:600;letter-spacing:.04em;line-height:1.4}
+a.item .w{font-size:11px;color:var(--beni);font-family:var(--mincho);letter-spacing:.06em;margin:2px 0 0}
+a.item .d{font-size:13px;color:var(--soft);margin:6px 0 0;line-height:1.7}
+footer{margin:48px 0 0;padding:20px 0 0;border-top:1px solid var(--rule);font-size:12.5px;color:var(--keshi);line-height:1.9}
+footer a{color:var(--fuji)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>ラーメン店経営ゲーム</h1>
+  <p class="sub">一杯の値づけから、店の一年を考える</p>
+  <div class="kasane"></div>
+  <p class="lede">四つの道具でひとそろいです。学生が使うもの、教員が使うものが分かれているので、配るリンクを間違えないようご注意ください。</p>
+</header>
+
+<h2>学生が使うもの</h2>
+<p class="note">授業中、手元の端末で開くもの。</p>
+<div class="grid">
+  <a class="item beni" href="sim.html">
+    <div class="t">作戦シミュレーター</div>
+    <div class="w">学生試算用</div>
+    <div class="d">値段や仕入れを変えたとき、利益がどう動くかを試算します。手を出す前に、紙の上で考えるための道具。</div>
+  </a>
+  <a class="item matsu" href="practice.html">
+    <div class="t">壁打ちモード</div>
+    <div class="w">練習用</div>
+    <div class="d">一人で一通り回してみる練習台。本番の前に、仕組みを体で覚えるために。</div>
+  </a>
+</div>
+
+<h2>授業の前に使うもの</h2>
+<p class="note">教員用。学生に配るものではありません。</p>
+<div class="grid">
+  <a class="item" href="setup.html">
+    <div class="t">バランス検証器</div>
+    <div class="w">初期設定用</div>
+    <div class="d">授業前に難易度を詰めるための道具。条件を振って、勝ち筋が一つに偏っていないかを確かめます。</div>
+  </a>
+</div>
+<p class="note" style="margin-top:14px">進行コンソール（ゲームマスター用）は、学生の目に触れないよう別の場所に置いてあります。</p>
+
+<footer>
+  <p>いずれもブラウザだけで動きます。サーバーに何かを送ることはありません。</p>
+  <p><a href="../">ほかの道具はこちら</a>　大和大学社会学部　松林 薫</p>
+</footer>
+
+</div>
+</body>
+</html>

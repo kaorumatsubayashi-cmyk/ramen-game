@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ラーメン経営ゲーム｜壁打ちモード</title>
+<style>
+:root{
+  --ink:#16233D; --ink-2:#3C4A66; --ink-3:#6B7893;
+  --paper:#E4E7EB; --surface:#FCFCFB; --rule:#C6CCD5; --rule-soft:#DFE3E9;
+  --gold:#B8890E; --gold-soft:#F5EBD2; --alert:#A0322A; --good:#1F6B4F;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",serif;
+  --gothic:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,"Noto Sans JP","Helvetica Neue",Arial,sans-serif;
+  --mono:"SFMono-Regular",Menlo,Consolas,"Roboto Mono",monospace;
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--gothic);font-size:14px;line-height:1.7;
+ -webkit-font-smoothing:antialiased;font-feature-settings:"palt" 1}
+h1,h2{font-family:var(--mincho);font-weight:600;letter-spacing:.04em;margin:0}
+header{background:var(--ink);color:#EDEFF3;padding:18px 20px 15px;border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:20}
+.hw{max-width:900px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+header h1{font-size:21px;color:#fff;letter-spacing:.08em}
+header h1 .t{display:block;font-family:var(--gothic);font-weight:400;font-size:11px;letter-spacing:.2em;color:var(--gold-soft);margin-bottom:4px}
+.status{font-family:var(--mono);font-size:12.5px;color:#A9B4C9;text-align:right}
+.status b{color:var(--gold-soft);font-size:16px}
+main{max-width:900px;margin:0 auto;padding:18px 14px 70px}
+section{background:var(--surface);border:1px solid var(--rule);margin-bottom:16px}
+section>h2{font-size:14.5px;padding:11px 16px 10px;border-bottom:1px solid var(--rule-soft);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+section>h2 em{font-style:normal;font-family:var(--gothic);font-size:11.5px;color:var(--ink-3)}
+.b{padding:14px 16px 16px}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:1fr 1fr}
+@media(max-width:560px){.g2{grid-template-columns:1fr}}
+label.fl{display:block;font-size:12px;color:var(--ink-2);margin-bottom:3px}
+label.fl small{display:block;color:var(--ink-3);font-size:11px;line-height:1.4}
+input[type=number],input[type=text],select,textarea{width:100%;font-family:var(--mono);font-size:13px;padding:6px 8px;
+ border:1px solid var(--rule);border-radius:2px;background:#fff;color:var(--ink)}
+input[type=number]{text-align:right}
+input[type=range]{width:100%;accent-color:var(--ink);margin:2px 0 0}
+input:focus,select:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold)}
+.fld{margin-bottom:11px}
+.rowv{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.rowv b{font-family:var(--mono);font-size:15px}
+button{font-family:var(--gothic);cursor:pointer;border-radius:2px}
+.btn{background:var(--ink);color:#fff;border:none;padding:11px 20px;font-size:14px;letter-spacing:.1em;border-radius:2px;font-family:var(--mincho)}
+.btn:hover{background:#243456}
+.btn:disabled{background:#9AA5B8;cursor:not-allowed}
+.gh{background:none;border:1px solid var(--rule);color:var(--ink-2);padding:7px 13px;font-size:12.5px}
+.gh:hover{border-color:var(--ink-3)}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.rowbtn{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:5px 7px;border-bottom:1px solid var(--rule-soft);text-align:right;white-space:nowrap}
+th{font-size:10.5px;color:var(--ink-3);font-weight:600;border-bottom:1px solid var(--rule)}
+td:first-child,th:first-child{text-align:left}
+.scroll{overflow-x:auto}
+.note{font-size:12.5px;padding:9px 12px;border-left:3px solid var(--gold);background:#FBF6E9;margin:10px 0 0}
+.note.warn{border-color:var(--alert);background:#FBEFEE}
+.note.ok{border-color:var(--good);background:#EEF6F1}
+canvas{display:block;width:100%}
+.cap{font-size:11.5px;color:var(--ink-3);margin:8px 0 0;line-height:1.6}
+.hero{background:var(--ink);color:#fff;padding:16px 18px;margin:-14px -16px 14px;
+ display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:end}
+.hero .k{font-size:11px;color:#9FADC6;letter-spacing:.06em}
+.hero .v{font-family:var(--mono);font-size:28px;line-height:1.15;color:#fff}
+.pl{width:100%;font-size:13px}
+.pl td{border:none;padding:3px 0;font-family:var(--mono)}
+.pl td:first-child{font-family:var(--gothic);color:var(--ink-2)}
+.pl tr.sum td{border-top:1px solid var(--rule);padding-top:6px;font-weight:700}
+.neg{color:var(--alert)}.pos{color:var(--good)}
+.msgpick{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+@media(max-width:520px){.msgpick{grid-template-columns:1fr 1fr}}
+.msgpick button{border:1px solid var(--rule);background:#fff;padding:8px 3px;font-size:12px;color:var(--ink-2);line-height:1.35}
+.msgpick button b{display:block;font-size:13px;color:var(--ink)}
+.msgpick button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#C8D2E4}
+.msgpick button[aria-pressed=true] b{color:#fff}
+.pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 8px;border-radius:9px;margin-left:6px;background:var(--gold-soft);color:#8A6708}
+.empty{padding:30px 16px;text-align:center;color:var(--ink-3);font-size:13px}
+.card{border:1px solid var(--rule);margin-bottom:10px}
+.card h3{background:#F2F3F1;margin:0;padding:9px 13px;font-family:var(--mincho);font-size:14.5px;border-bottom:1px solid var(--rule-soft);
+ display:flex;justify-content:space-between;align-items:baseline}
+.card h3 span{font-family:var(--mono);font-size:12.5px;color:var(--ink-3)}
+.card .cb{padding:11px 13px}
+</style>
+</head>
+<body>
+<header><div class="hw">
+  <h1><span class="t">RAMEN BUSINESS GAME ／ SOLO PRACTICE</span>壁打ちモード</h1>
+  <div class="status" id="hstat">未開始</div>
+</div></header>
+
+<main>
+<section><h2>このモードについて <em>設定はゲームのたびランダムに変わります</em></h2>
+  <div class="b">
+    <p style="margin:0 0 10px">同じルール・同じ画面で、4つのラーメン店を相手に練習できます。相手の狙い（値段重視か、宣伝重視か…）は名前からは分かりません。街の性格・対戦相手は毎回ランダムです。</p>
+    <div class="fld" style="max-width:280px">
+      <label class="fl" for="turnsSel">ターン数</label>
+      <select id="turnsSel">
+        <option value="random">おまかせ（6・8・10期からランダム）</option>
+        <option value="4">4期</option><option value="5">5期</option><option value="6">6期</option>
+        <option value="7">7期</option><option value="8">8期</option><option value="9">9期</option>
+        <option value="10">10期</option><option value="11">11期</option><option value="12">12期</option>
+      </select>
+    </div>
+    <div class="rowbtn"><button class="btn" id="startBtn">新しいゲームを始める</button></div>
+    <div id="setupMsg"></div>
+  </div>
+</section>
+
+<div id="game" style="display:none">
+
+<section><h2>市場調査 <em>今期・無料標本20人</em></h2>
+  <div class="b">
+    <canvas id="cHist" height="180"></canvas>
+    <p class="cap" id="sampleCap"></p>
+  </div>
+</section>
+
+<section><h2>他店の公開情報</h2>
+  <div class="b"><div class="scroll"><table id="rivalTbl"></table></div>
+    <div class="note" id="revealNote" style="display:none"></div>
+  </div>
+</section>
+
+<section><h2>今期の決定</h2>
+  <div class="b">
+    <div id="decBox"></div>
+    <div class="rowbtn"><button class="btn" id="confirmBtn">この期を確定する</button></div>
+    <div id="turnMsg"></div>
+  </div>
+</section>
+
+<section><h2>結果 <em>直近の期</em></h2>
+  <div class="b" id="resultBox"><div class="empty">まだ結果がありません</div></div>
+</section>
+
+<section><h2>純資産の推移</h2>
+  <div class="b"><canvas id="cNav" height="260"></canvas></div>
+</section>
+
+<section><h2>市場ポジション <em>競合調査を買うと表示されます</em></h2>
+  <div class="b" id="mapWrap">
+    <div class="empty" id="mapLocked">まだ競合調査を買っていません。買うと、他店の位置と自店の位置が地図で見られます。</div>
+    <canvas id="cMap" height="260" style="display:none"></canvas>
+    <p class="cap" id="mapCap" style="display:none"></p>
+  </div>
+</section>
+
+<div id="debriefWrap"></div>
+
+</div>
+</main>
+
+<script>
+/*GM-ENGINE-START*/
+/* ============================================================
+   ラーメン経営ゲーム — 進行エンジン（GM用）
+   バランス検証器と同じ計算式。1期ずつ人間の決定を受けて処理する。
+   ============================================================ */
+
+const P0 = {
+  popPer:600, cost:300, priceFloor:300, priceRef:800,
+  labor:20000, sga:10000, buyCap:1500, buyCapBroke:200, cash0:500000,
+  mixPrice:1, mixAd:1, mixTaste:1, conc:18, humps:2,
+  tasteSens:1.4, tau:0.15, topK:80,
+  awareBase:0.25, awareMax:0.97, awareK:35000, buzzK:15000, storeBonus:0.10,
+  msgStrong:1.60, msgWeak:0.55, msgBonus:0.06, repeatThresh:0.55,
+  rate:0.05, creditBase:300000, creditMult:1.0, storeCost:200000,
+  resFree:20, res1:15000, resN1:80, res2:40000, resN2:280, resRival:25000,
+  turns:10, events:1, reshuffle:1, seed:20260813
+};
+const MSG = [
+  {n:'認知拡大',s:'認知'},{n:'安さ訴求',s:'安さ'},
+  {n:'話題性訴求',s:'話題'},{n:'味わい訴求',s:'味'}
+];
+const EVENTS = [
+  {t:'豚骨価格高騰', d:'今期に仕入れた分だけ1食50円の割増を払います（在庫の評価は変わりません）', cost:50, taste:1, price:1, pop:1},
+  {t:'テレビ特集',   d:'味へのこだわりが注目され、味覚志向が強まります', cost:0, taste:1.35, price:1, pop:1},
+  {t:'不況',         d:'財布のひもが固くなり、価格志向が強まります', cost:0, taste:1, price:1.35, pop:1},
+  {t:'商店街の祭り', d:'人出が増え、来客が15%増えます', cost:0, taste:1, price:1, pop:1.15}
+];
+
+function mkRng(seed){let a=seed>>>0;return()=>{a|=0;a=(a+0x6D2B79F5)|0;
+  let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;
+  return((t^(t>>>14))>>>0)/4294967296;};}
+function gauss(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function gam(r,k){ if(k<1) return gam(r,k+1)*Math.pow(Math.max(1e-12,r()),1/k);
+  const d=k-1/3,c=1/Math.sqrt(9*d);
+  for(;;){let x,v;do{x=gauss(r);v=1+c*x;}while(v<=0);v=v*v*v;const u=r();
+    if(u<1-0.0331*x*x*x*x)return d*v;
+    if(Math.log(Math.max(1e-12,u))<0.5*x*x+d*(1-v+Math.log(v)))return d*v;}}
+
+/* ---------- 街をつくる（ゲーム開始時に1回だけ） ---------- */
+function makeTown(P, nTeams){
+  const rng = mkRng(P.seed);
+  const n = nTeams * P.popPer;
+  const perms=[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]], RW=[0.6,0.3,0.1];
+  const mw=[P.mixPrice,P.mixAd,P.mixTaste].map(v=>Math.max(1e-4,v)), mws=mw[0]+mw[1]+mw[2];
+  const mean=perms.map(pm=>{const f=pm[0]===0?0:(pm[1]===0?1:2);return mw[f]/mws/2;});
+  const g=mean.map(m=>gam(rng,Math.max(0.3,P.conc)*m)), gs=g.reduce((a,b)=>a+b,0)||1;
+  const mix=g.map(v=>v/gs); const cum=[];let c=0;mix.forEach(v=>{c+=v;cum.push(c);});
+  const K=1+Math.floor(rng()*P.humps), mu=[],sd=[],hw=[];let hs=0;
+  for(let k=0;k<K;k++){mu.push(15+rng()*70);sd.push(8+rng()*14);const w=.4+rng();hw.push(w);hs+=w;}
+  const hc=[];let h2=0;hw.forEach(w=>{h2+=w/hs;hc.push(h2);});
+  const wP=new Float32Array(n),wA=new Float32Array(n),wT=new Float32Array(n),
+        ideal=new Float32Array(n),first=new Uint8Array(n),perm=new Uint8Array(n);
+  for(let i=0;i<n;i++){
+    const u=rng();let t=0;while(t<5&&u>cum[t])t++;
+    const p=perms[t];perm[i]=t;
+    wP[i]=RW[p[0]];wA[i]=RW[p[1]];wT[i]=RW[p[2]];
+    first[i]=p[0]===0?0:(p[1]===0?1:2);
+    const v=rng();let k=0;while(k<K-1&&v>hc[k])k++;
+    let x=mu[k]+gauss(rng)*sd[k]; if(x<0)x=-x; if(x>100)x=200-x;
+    ideal[i]=Math.max(0,Math.min(100,x));
+  }
+  // 真の需要の山（最終講評で答え合わせに使う）
+  const dens=new Float64Array(101);
+  for(let i=0;i<n;i++)dens[Math.round(ideal[i])]++;
+  const sm=new Float64Array(101);
+  for(let i=0;i<=100;i++){let s=0,m=0;for(let k=-5;k<=5;k++){const j=i+k;if(j<0||j>100)continue;s+=dens[j];m++;}sm[i]=s/m;}
+  let peak=0;for(let i=1;i<=100;i++)if(sm[i]>sm[peak])peak=i;
+  const fc=[0,0,0];for(let i=0;i<n;i++)fc[first[i]]++;
+  return {n,wP,wA,wT,ideal,first,perm,mix,dens:sm,peak,
+          firstShare:fc.map(v=>v/n), repeat:new Int8Array(n).fill(-1), rng};
+}
+
+/* ---------- 市場調査 ---------- */
+function survey(town, k, rng){
+  const rows=[];
+  const P=[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
+  for(let i=0;i<k;i++){
+    const j=Math.floor(rng()*town.n), p=P[town.perm[j]];
+    rows.push([p[0]+1,p[1]+1,p[2]+1,Math.round(town.ideal[j])]);
+  }
+  return rows;
+}
+
+/* ---------- 決定の検算とクランプ ---------- */
+function clampDecision(P, t, d){
+  const warn=[];
+  const out={buy:Math.max(0,Math.round(d.buy||0)), price:Math.round(d.price||P.priceFloor),
+    top:Math.max(0,Math.round(d.top||0)), ad:Math.max(0,Math.round(d.ad||0)),
+    msg:Math.min(3,Math.max(0,Math.round(d.msg||0))), rich:Math.min(100,Math.max(0,Math.round(d.rich||50))),
+    research:Math.max(0,Math.round(d.research||0)), rival:d.rival?1:0, open:d.open?1:0};
+  if(out.price<P.priceFloor){warn.push('価格が下限を下回るため'+P.priceFloor+'円に補正');out.price=P.priceFloor;}
+  if(out.open && t.stores>1){warn.push('すでに2店あるため出店を無効化');out.open=0;}
+  const stores=t.stores+out.open;
+  const limit=P.creditBase+Math.max(0,t.retained)*P.creditMult;
+  const room=Math.max(0,limit-t.debt);
+  const hardCap=(t.cash<=0&&t.debt>=limit)?P.buyCapBroke:P.buyCap*stores;
+  if(out.buy>hardCap){warn.push('仕入上限を超えるため'+hardCap+'食に補正');out.buy=hardCap;}
+  let fixedOut=out.ad+out.research+(out.rival?P.resRival:0)+(out.open?P.storeCost:0);
+  if(fixedOut>t.cash+room){
+    warn.push('宣伝・調査・出店の合計が資金を超えるため出店と調査を取り消し');
+    out.open=0;out.rival=0;out.research=0;
+    fixedOut=Math.min(out.ad,t.cash+room);out.ad=fixedOut;
+  }
+  const canBuy=Math.floor(Math.max(0,t.cash+room-fixedOut)/P.cost);
+  if(out.buy>canBuy){warn.push('資金不足のため仕入を'+canBuy+'食に補正');out.buy=canBuy;}
+  return {d:out,warn};
+}
+
+/* ---------- 1期を処理する ---------- */
+function runTurn(P, town, teams, decs, turn, rng){
+  const NT=teams.length;
+  // イベント
+  let ev=null;
+  if(P.events && rng()<0.20) ev=EVENTS[Math.floor(rng()*EVENTS.length)];
+  const surcharge=ev?ev.cost:0, mTaste=ev?ev.taste:1, mPrice=ev?ev.price:1, mPop=ev?ev.pop:1;
+  const unit=P.cost;  // 在庫の評価がぶれないよう、高騰分は仕入時の割増として別建てにする
+
+  const warns=[];
+  const D=teams.map((t,i)=>{const c=clampDecision(P,t,decs[i]);
+    if(c.warn.length)warns.push({team:t.name,msgs:c.warn});return c.d;});
+
+  // 支払い
+  teams.forEach((t,i)=>{
+    const d=D[i];
+    t._stores=t.stores+d.open;
+    t._sur=d.buy*surcharge;
+    t._out=d.buy*unit+t._sur+d.ad+d.research+(d.rival?P.resRival:0)+(d.open?P.storeCost:0);
+    t.cash-=t._out; settle(P,t);
+  });
+
+  // 認知と選択
+  const pAw=[],pu=[],au=[],tu=[],sn=[],ri=[],ms=[],bz=[],gn=[];
+  teams.forEach((t,i)=>{const d=D[i];
+    pu[i]=Math.min(1,(P.priceRef-d.price)/(P.priceRef-P.priceFloor))*mPrice;
+    au[i]=d.ad/(d.ad+P.buzzK); bz[i]=au[i];
+    tu[i]=d.top/(d.top+P.topK);
+    sn[i]=P.tasteSens*(t._stores>1?0.55:1)/100;
+    ri[i]=d.rich; ms[i]=d.msg;
+    gn[i]=(1-P.awareBase)*(d.ad/(d.ad+P.awareK))+P.storeBonus*(t._stores-1);
+  });
+  const demand=new Array(NT).fill(0), sold=new Array(NT).fill(0);
+  const choice=new Int8Array(town.n);
+  const gt=new Float64Array(4096);
+  for(let i=0;i<4096;i++)gt[i]=P.tau*(-Math.log(-Math.log(Math.max(1e-9,rng()))));
+  let gi=0;
+  const effN=Math.round(town.n*mPop);
+  for(let i=0;i<effN;i++){
+    const c=i<town.n?i:i-town.n;
+    const id=town.ideal[c],w1=town.wP[c],w2=town.wA[c],w3=town.wT[c]*mTaste,f=town.first[c];
+    let best=-1,bg=-1e9,bu=0,any=0;
+    for(let j=0;j<NT;j++){
+      if(town.repeat[c]!==j){
+        const mf=ms[j]===0?1:(ms[j]-1===f?P.msgStrong:P.msgWeak);
+        let a=P.awareBase+gn[j]*mf; if(a>P.awareMax)a=P.awareMax;
+        if(rng()>=a)continue;
+      }
+      any=1;
+      let d=id-ri[j]; if(d<0)d=-d;
+      let u=w1*pu[j]+w2*au[j]+w3*(tu[j]-sn[j]*d);
+      if(ms[j]!==0&&ms[j]-1===f)u+=P.msgBonus*bz[j];
+      const g=u+gt[gi=(gi+1)&4095];
+      if(g>bg){bg=g;best=j;bu=u;}
+    }
+    if(!any){best=Math.floor(rng()*NT);bu=0;}
+    choice[c]=best; demand[best]++;
+    town.repeat[c]= bu>P.repeatThresh ? best : -1;
+  }
+  // 在庫制約と流出入
+  const stock=teams.map((t,i)=>t.inv+D[i].buy);
+  const away=demand.map((v,j)=>Math.max(0,v-stock[j]));
+  for(let j=0;j<NT;j++)sold[j]=Math.min(demand[j],stock[j]);
+  const inflow=new Array(NT).fill(0);
+  if(P.reshuffle){
+    const remain=stock.map((v,j)=>v-sold[j]);
+    for(let i=0;i<town.n;i++){
+      const j=choice[i]; if(away[j]<=0)continue;
+      if(rng()>=away[j]/demand[j])continue;
+      const id=town.ideal[i],w1=town.wP[i],w2=town.wA[i],w3=town.wT[i]*mTaste,f=town.first[i];
+      let best=-1,bu=-1e9;
+      for(let k=0;k<NT;k++){
+        if(k===j||remain[k]<=0)continue;
+        let d=id-ri[k]; if(d<0)d=-d;
+        let u=w1*pu[k]+w2*au[k]+w3*(tu[k]-sn[k]*d);
+        if(ms[k]!==0&&ms[k]-1===f)u+=P.msgBonus*bz[k];
+        if(u>bu){bu=u;best=k;}
+      }
+      if(best>=0){remain[best]--;sold[best]++;inflow[best]++;}
+    }
+  }
+  // 決算
+  const total=sold.reduce((a,b)=>a+b,0)||1;
+  const rows=teams.map((t,i)=>{
+    const d=D[i], s=sold[i];
+    const rev=s*d.price, cogs=s*unit, topc=s*d.top;
+    const fixed=t._stores*(P.labor+P.sga);
+    const res=d.research+(d.rival?P.resRival:0);
+    const openc=d.open?P.storeCost:0;
+    const interest=Math.round(t.debt*P.rate);
+    const profit=rev-cogs-topc-fixed-interest-d.ad-res-openc-t._sur;
+    t.cash+=rev-topc-fixed-interest;
+    t.inv=stock[i]-s; t.stores=t._stores; t.retained+=profit;
+    settle(P,t);
+    const lost=Math.max(0,demand[i]-stock[i]);
+    const r={turn,name:t.name,code:t.code,...d,stores:t.stores,
+      demand:demand[i],inflow:inflow[i],sold:s,lost,share:s/total,
+      rev,cogs,topc,fixed,res,openc,interest,profit,surcharge:t._sur,
+      cash:Math.round(t.cash),debt:Math.round(t.debt),inv:t.inv,
+      retained:Math.round(t.retained),unit,
+      nav:Math.round(t.cash+t.inv*P.cost*0.5-t.debt),
+      dead:t.cash<=0&&t.debt>=P.creditBase+Math.max(0,t.retained)*P.creditMult};
+    t.hist.push(r);
+    return r;
+  });
+  return {turn,ev,rows,warns};
+}
+function settle(P,t){
+  // 不足分は必ず借入で埋める（枠超えは許すが、その状態が続くと仕入が制限される）
+  if(t.cash<0){ t.debt+=-t.cash; t.cash=0; }
+}
+function newTeam(P,name,code){
+  return {name,code,cash:P.cash0,debt:0,inv:0,retained:0,stores:1,hist:[]};
+}
+
+/* ---------- 最終講評の分析 ---------- */
+function analyze(P, town, teams){
+  const T=teams.length;
+  const rank=teams.map((t,i)=>({i,nav:t.hist.length?t.hist[t.hist.length-1].nav:P.cash0}))
+                  .sort((a,b)=>b.nav-a.nav);
+  const winner=teams[rank[0].i];
+  const out=teams.map((t,idx)=>{
+    const H=t.hist, N=H.length||1;
+    const sold=H.reduce((a,r)=>a+r.sold,0);
+    const rev=H.reduce((a,r)=>a+r.rev,0);
+    const lost=H.reduce((a,r)=>a+r.lost,0);
+    const ad=H.reduce((a,r)=>a+r.ad,0);
+    const res=H.reduce((a,r)=>a+r.res,0);
+    const fixed=H.reduce((a,r)=>a+r.fixed,0);
+    const inte=H.reduce((a,r)=>a+r.interest,0);
+    const gm=H.reduce((a,r)=>a+(r.rev-r.cogs-r.topc),0);
+    const avgPrice=sold?Math.round(rev/sold):0;
+    const gmUnit=sold?Math.round(gm/sold):0;
+    // ポジション精度
+    const richAvg=H.reduce((a,r)=>a+r.rich,0)/N;
+    const posErr=H.reduce((a,r)=>a+Math.abs(r.rich-town.peak),0)/N;
+    const posDrift=Math.sqrt(H.reduce((a,r)=>a+Math.pow(r.rich-richAvg,2),0)/N); // 位置のブレ
+    // 訴求：市場最大層を狙えたか／他店と被ったか
+    let msgHit=0,msgCrowd=0,msgUsed=0;
+    const bigF=town.firstShare.indexOf(Math.max(...town.firstShare));
+    H.forEach((r,k)=>{
+      if(r.msg!==0){msgUsed++; if(r.msg-1===bigF)msgHit++;
+        const same=teams.filter(o=>o!==t&&o.hist[k]&&o.hist[k].msg===r.msg).length;
+        if(same>0)msgCrowd++;}
+    });
+    // 優勝チームとの差の分解
+    const W=winner.hist;
+    let bridge=null;
+    if(t!==winner&&W.length){
+      const wSold=W.reduce((a,r)=>a+r.sold,0);
+      const wGm=W.reduce((a,r)=>a+(r.rev-r.cogs-r.topc),0);
+      const wUnit=wSold?wGm/wSold:0;
+      const myUnit=sold?gm/sold:0;
+      const qty=(sold-wSold)*wUnit;
+      const price=(myUnit-wUnit)*sold;
+      const adDiff=-(ad-W.reduce((a,r)=>a+r.ad,0));
+      const resDiff=-(res-W.reduce((a,r)=>a+r.res,0));
+      const fixDiff=-(fixed-W.reduce((a,r)=>a+r.fixed,0));
+      const intDiff=-(inte-W.reduce((a,r)=>a+r.interest,0))
+        -((H.reduce((a,r)=>a+(r.surcharge||0),0))-(W.reduce((a,r)=>a+(r.surcharge||0),0)));
+      const myInv=H.length?H[H.length-1].inv:0, wInv=W[W.length-1].inv;
+      const invDiff=-(myInv-wInv)*P.cost*0.5;   // 在庫は原価の半値評価なので持つほど目減りする
+      bridge={qty,price,ad:adDiff,res:resDiff,fix:fixDiff,int:intDiff,inv:invDiff,
+        total:qty+price+adDiff+resDiff+fixDiff+intDiff+invDiff};
+    }
+    return {name:t.name,code:t.code,
+      rank:rank.findIndex(r=>r.i===idx)+1,
+      nav:H.length?H[H.length-1].nav:P.cash0,
+      sold,rev,lost,ad,res,fixed,inte,gm,avgPrice,gmUnit,
+      richAvg:Math.round(richAvg),posErr:Math.round(posErr),posDrift:Math.round(posDrift),
+      posGap:Math.abs(Math.round(richAvg)-town.peak),
+      invEnd:H.length?H[H.length-1].inv:0,
+      msgUsed,msgHit,msgCrowd,bridge,isWinner:t===winner,
+      shareAvg:100*H.reduce((a,r)=>a+r.share,0)/N};
+  });
+  return {rank:out.sort((a,b)=>a.rank-b.rank), peak:town.peak,
+    firstShare:town.firstShare, mix:town.mix, winner:winner.name};
+}
+
+/* ---------- 決算三表（PL・BS・CF） ---------- */
+function statements(P, team){
+  const H=team.hist, out=[];
+  let prevDebt=0, prevCash=P.cash0;
+  H.forEach((r,i)=>{
+    const invVal=r.inv*r.unit;
+    const pl={turn:r.turn, rev:r.rev, cogs:r.cogs, topc:r.topc,
+      gross:r.rev-r.cogs-r.topc, fixed:r.fixed, ad:r.ad, res:r.res, openc:r.openc,
+      interest:r.interest, profit:r.profit};
+    const capital=P.cash0;
+    const bs={turn:r.turn, cash:r.cash, inv:r.inv, invVal,
+      assets:r.cash+invVal, debt:r.debt, capital, retained:r.retained,
+      equity:capital+r.retained};
+    const opCF=r.rev-r.buy*r.unit-(r.surcharge||0)-r.topc-r.fixed-r.ad-r.res-r.interest;
+    const investCF=-r.openc;
+    const financeCF=r.debt-prevDebt;
+    const netCF=opCF+investCF+financeCF;
+    const cf={turn:r.turn, cashBegin:prevCash, opCF, investCF, financeCF, netCF, cashEnd:r.cash};
+    prevDebt=r.debt; prevCash=r.cash;
+    out.push({turn:r.turn, pl, bs, cf});
+  });
+  return out;
+}
+/*GM-ENGINE-END*/
+
+/*SOLO-ENGINE-START*/
+/* ============================================================
+   ラーメン経営ゲーム — 壁打ち用エンジン
+   GM進行エンジン（本番と同じルール）＋ バランス検証器のAI意思決定を接続
+   ============================================================ */
+
+/* ---------- 対戦相手の店名（戦略とは無関係。ランダムに割り当てる） ---------- */
+const SOLO_SHOP_NAMES = [
+  '麺屋一心','中華そば風','龍鳳軒','味源','大黒屋','まる福','一番亭','風雲児',
+  '虎徹','麺処 響','中華そば匠','八福','龍馬軒','福来軒','麺屋大和','一乃船',
+  '喜楽','龍神軒','麺屋心','福龍','丸八','中華そば時雨','麺屋十兵衛','はなび軒'
+];
+
+/* ---------- AIの戦略アーキタイプ（バランス検証器と同一。店名には出さない） ---------- */
+const SOLO_ARCHETYPES = [
+  { id: 'cheap',   name: '薄利多売',   aw: 0.40, mk: 1.27, tp: 0.07, vol: 1.30, msg: 1, note: '価格勝負。数で固定費を吸収する' },
+  { id: 'premium', name: '高付加価値', aw: 0.60, mk: 2.15, tp: 0.60, vol: 0.80, msg: 3, note: '高単価・高トッピング。客数は少なくてよい' },
+  { id: 'ads',     name: '宣伝重視',   aw: 0.88, mk: 1.70, tp: 0.20, vol: 1.15, msg: 2, note: '認知率を買いに行く' },
+  { id: 'data',    name: '調査重視',   aw: 0.65, mk: 1.75, tp: 0.33, vol: 1.00, msg: 0, note: '調査を買い、需要の山と競合の隙間を突く' },
+  { id: 'safe',    name: '財務堅実',   aw: 0.33, mk: 1.73, tp: 0.17, vol: 0.85, msg: 1, note: '投資を絞り借入を避ける' },
+  { id: 'balance', name: 'バランス',   aw: 0.62, mk: 1.67, tp: 0.27, vol: 1.00, msg: 0, note: '全項目を平均的に' },
+  { id: 'expand',  name: '拡大投資',   aw: 0.72, mk: 1.60, tp: 0.30, vol: 1.15, msg: 0, note: '需要が溢れたら2号店を出す' },
+  { id: 'follow',  name: '追随',       aw: 0.60, mk: 1.67, tp: 0.27, vol: 1.00, msg: 0, note: '首位の価格・味を模倣する' }
+];
+
+function soloAdFor(P, target) {
+  const z = (target - P.awareBase) / (1 - P.awareBase);
+  if (z <= 0) return 0;
+  if (z >= 0.95) return P.awareK * 19;
+  return Math.round(P.awareK * z / (1 - z));
+}
+function soloCreditLimit(P, team) { return P.creditBase + Math.max(0, team.retained) * P.creditMult; }
+
+/* ---------- セッション限りの「個性」を作る ----------
+   同じ戦略でも、値付け水準・トッピング水準・宣伝目標・得意な訴求は
+   毎回すこしずつ違う数字になる。何度も遊んで「型」を覚えても、
+   毎回まったく同じ数字が出てくるわけではないようにする。 */
+function mkAiProfile(a, rng) {
+  const jitter = (spread) => 1 + (rng() * 2 - 1) * spread;
+  const msgReroll = rng() < 0.35; // 3〜4回に1回、得意な訴求そのものが変わる
+  const msg = msgReroll ? Math.floor(rng() * 4) : a.msg;
+  return Object.assign({}, a, {
+    mk: a.mk * jitter(0.12),
+    tp: Math.max(0.02, a.tp * jitter(0.18)),
+    aw: Math.max(0.15, Math.min(0.95, a.aw * jitter(0.12))),
+    vol: a.vol * jitter(0.10),
+    msg
+  });
+}
+
+/* ---------- AIの意思決定（前期の公開/自店データから毎期その場で組み立てる） ---------- */
+function aiDecide(P, team, arch, prevRow, pop, pub, leaderIdx, turn, rng, myIdx) {
+  const a = arch;
+  const s = { cash: team.cash, debt: team.debt, inv: team.inv, retained: team.retained, stores: team.stores,
+    price: prevRow ? prevRow.price : 0, top: prevRow ? prevRow.top : 0, ad: prevRow ? prevRow.ad : 0,
+    rich: prevRow ? prevRow.rich : 50, msg: prevRow ? prevRow.msg : a.msg,
+    sold: prevRow ? prevRow.sold : 0, share: prevRow ? prevRow.share : 0,
+    lastSoldOut: prevRow ? prevRow.lost > 0 : false,
+    lastStock: prevRow ? prevRow.inv + prevRow.sold : 0,
+    lastDemand: prevRow ? prevRow.demand : 0,
+    researchSpend: 0, newStoreCost: 0, rivalRich: null, rivalInfo: null };
+  const unitCost = P.cost;
+  const fair = pop.n / pub.length;
+
+  const basePrice = Math.round(P.cost * a.mk);
+  const baseTop = Math.round(P.cost * a.tp);
+  const baseAd = soloAdFor(P, a.aw);
+
+  if (turn === 1) { s.price = basePrice; s.top = baseTop; s.ad = baseAd; }
+  else {
+    if (s.lastSoldOut) s.price += Math.round(P.cost * 0.07);
+    else if (s.sold < s.lastStock * 0.8) s.price -= Math.round(P.cost * 0.05);
+    if (s.share < (1 / pub.length) * 0.75) s.price -= Math.round(P.cost * 0.05);
+    if (s.share > (1 / pub.length) * 1.4) s.price += Math.round(P.cost * 0.03);
+    s.top = baseTop; s.ad = baseAd;
+    // 誰かが突出して宣伝している場合、資金が許す範囲で追いかける（実際の競争のように）
+    const maxRivalAd = Math.max(0, ...pub.filter((_, k) => k !== myIdx).map(x => x.ad));
+    if (maxRivalAd > s.ad * 1.3) s.ad = Math.max(s.ad, Math.round(maxRivalAd * 0.85));
+    const gm = Math.max(0, s.sold * (s.price - unitCost - s.top));
+    const room = gm - s.stores * (P.labor + P.sga);
+    if (s.ad > room * 1.6 && turn > 2) s.ad = Math.max(Math.round(baseAd * 0.35), Math.round(room * 1.6));
+  }
+  if (a.id === 'follow' && turn > 1) s.price = Math.round(pub[leaderIdx].price * 0.97);
+  if (s.cash < P.cash0 * 0.25) s.ad = Math.round(s.ad * 0.5);
+  const floor = Math.max(P.priceFloor, unitCost + s.top + Math.round(P.cost * 0.10));
+  s.price = Math.max(floor, Math.min(P.priceRef * 1.6, Math.round(s.price)));
+
+  /* 調査 */
+  let sample = [], sampleFirstArr = [];
+  const addSample = (k) => { sample = []; sampleFirstArr = [];
+    for (let i = 0; i < k; i++) { const idx = Math.floor(rng() * pop.n); sample.push(pop.ideal[idx]); sampleFirstArr.push(pop.first[idx]); } };
+  if (a.id === 'data') {
+    if (s.cash > P.cash0 * 0.36) {
+      if (turn === 1) { s.researchSpend += P.res2; addSample(P.resFree + P.resN2); }
+      else { s.researchSpend += P.res1; addSample(P.resFree + P.resN1); }
+      if (turn > 1 && turn % 2 === 0 && s.cash > P.cash0 * 0.52) {
+        s.researchSpend += P.resRival;
+        // 競合調査：前期時点の他店の味の位置を開示（今期はまだ未確定のため直近判明分を使う）
+        s.rivalRich = pub.map((x, k) => (k === myIdx ? null : x.rich));
+      }
+    } else addSample(P.resFree);
+  } else addSample(P.resFree);
+
+  /* 味の方向性 */
+  if (a.id === 'data') {
+    let bestX = 50, bestScore = -1e9;
+    for (let x = 0; x <= 100; x += 2) {
+      let d = 0;
+      for (let k = 0; k < sample.length; k++) { const z = (sample[k] - x) / 12; d += Math.exp(-0.5 * z * z); }
+      d /= Math.max(1, sample.length);
+      let crowd = 0;
+      if (s.rivalRich) for (let k = 0; k < s.rivalRich.length; k++) {
+        if (s.rivalRich[k] == null) continue;
+        const z = (s.rivalRich[k] - x) / 15; crowd += Math.exp(-0.5 * z * z);
+      }
+      const sc = d / (1 + crowd);
+      if (sc > bestScore) { bestScore = sc; bestX = x; }
+    }
+    s.rich = bestX;
+  } else if (turn === 1) s.rich = 50 + Math.round((rng() - 0.5) * 50);
+  else {
+    // 苦戦が続くと、まれに味の方向性を見直す（ずっと固定ではない）
+    const H = team.hist;
+    if (H.length >= 2) {
+      const fairShare = 1 / pub.length;
+      const struggling = H.slice(-2).every(r => r.share < fairShare * 0.65);
+      if (struggling && rng() < 0.12) s.rich += Math.round((rng() - 0.5) * 2 * 22);
+    }
+  }
+  s.rich = Math.max(0, Math.min(100, s.rich));
+
+  /* 宣伝の訴求内容 */
+  if (a.id === 'data') {
+    const want = soloChooseMessage(P, s, sample, sampleFirstArr, pub, unitCost);
+    if (turn <= 2) s.msg = want;
+    else if (s.share < (1 / pub.length) * 0.7 && turn % 3 === 0) s.msg = want;
+  } else if (a.id === 'follow' && turn > 1) s.msg = pub[leaderIdx].msg;
+  else s.msg = a.msg;
+
+  /* 出店 */
+  let open = 0;
+  if (a.id === 'expand' && s.stores === 1 && turn >= 2 && turn <= P.turns - 3 &&
+      s.lastSoldOut && s.cash > P.storeCost + P.cash0 * 0.3) { s.newStoreCost = P.storeCost; open = 1; }
+
+  /* 仕入れ */
+  let target = fair * a.vol;
+  if (turn > 1) {
+    if (s.lastSoldOut) target = s.lastDemand * 1.15;
+    else if (team.inv > s.sold * 0.25) target = Math.max(0, s.sold * 0.9 - team.inv);
+    else target = Math.max(s.sold * 1.05 - team.inv, fair * 0.3);
+    if (s.newStoreCost > 0) target *= 1.5;
+  }
+  const limit = soloCreditLimit(P, team);
+  const funds = s.cash + Math.max(0, limit - s.debt) - s.ad - s.researchSpend - s.newStoreCost;
+  const capMoney = funds > 0 ? Math.floor(funds / unitCost) : 0;
+  const hardCap = (s.cash <= 0 && s.debt >= limit) ? P.buyCapBroke : P.buyCap * (s.stores + open);
+  const buy = Math.max(0, Math.min(Math.round(target), capMoney, hardCap));
+
+  return { buy, price: s.price, top: s.top, ad: s.ad, msg: s.msg, rich: s.rich,
+    research: 0, rival: (s.researchSpend > 0 && s.rivalRich) ? 1 : 0, open };
+}
+
+function soloChooseMessage(P, s, sample, sampleFirstArr, pub, unitCost) {
+  const N = Math.min(140, sample.length);
+  if (N < 5) return 0;
+  const myPU = Math.min(1, (P.priceRef - s.price) / (P.priceRef - P.priceFloor));
+  const myAU = s.ad / (s.ad + P.buzzK);
+  const myTU = s.top / (s.top + P.topK);
+  const gain = (1 - P.awareBase) * (s.ad / (s.ad + P.awareK));
+  const avgAd = pub.reduce((t, x) => t + x.ad, 0) / pub.length;
+  const rivals = pub.map((x) => ({
+    pu: Math.min(1, (P.priceRef - x.price) / (P.priceRef - P.priceFloor)),
+    au: avgAd / (avgAd + P.buzzK),
+    tu: myTU, rich: 50,
+    gain: (1 - P.awareBase) * (avgAd / (avgAd + P.awareK)),
+    msg: x.msg
+  }));
+  const score = [0, 0, 0, 0];
+  for (let i = 0; i < N; i++) {
+    const id = sample[i], f = sampleFirstArr[i];
+    const w = [0.2, 0.2, 0.2]; w[f] = 0.6;
+    let dm = id - s.rich; if (dm < 0) dm = -dm;
+    const myBase = w[0] * myPU + w[1] * myAU + w[2] * (myTU - P.tasteSens * dm / 100);
+    for (let m = 0; m < 4; m++) {
+      const hit = m !== 0 && m - 1 === f;
+      const mf = m === 0 ? 1 : (hit ? P.msgStrong : P.msgWeak);
+      let aw = P.awareBase + gain * mf; if (aw > P.awareMax) aw = P.awareMax;
+      const u = myBase + (hit ? P.msgBonus * myAU : 0);
+      let survive = 1;
+      for (let r = 0; r < rivals.length; r++) {
+        const v = rivals[r];
+        let d = id - v.rich; if (d < 0) d = -d;
+        let ru = w[0] * v.pu + w[1] * v.au + w[2] * (v.tu - P.tasteSens * d / 100);
+        if (v.msg !== 0 && v.msg - 1 === f) ru += P.msgBonus * v.au;
+        if (ru <= u) continue;
+        const rmf = v.msg === 0 ? 1 : (v.msg - 1 === f ? P.msgStrong : P.msgWeak);
+        let raw = P.awareBase + v.gain * rmf; if (raw > P.awareMax) raw = P.awareMax;
+        survive *= (1 - raw);
+      }
+      score[m] += aw * (survive + (1 - survive) * 0.12);
+    }
+  }
+  let bm = 0; for (let m = 1; m < 4; m++) if (score[m] > score[bm]) bm = m;
+  return bm;
+}
+
+/* ---------- セッション初期化：街・対戦相手をランダムに決める ---------- */
+function soloNewSession(seedOverride, turnsOverride) {
+  const seed = seedOverride || (Date.now() % 1000000);
+  const rng0 = mkRng(seed);
+  const turns = (turnsOverride && turnsOverride >= 4 && turnsOverride <= 12)
+    ? turnsOverride : [6, 8, 8, 10][Math.floor(rng0() * 4)];
+  const pool = SOLO_ARCHETYPES.map((a, i) => i);
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng0() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  const aiIdx = pool.slice(0, 4);
+  const P = Object.assign({}, P0, { turns, seed });
+  const aiProfiles = aiIdx.map(i => mkAiProfile(SOLO_ARCHETYPES[i], rng0));
+  const shopPool = SOLO_SHOP_NAMES.slice();
+  for (let i = shopPool.length - 1; i > 0; i--) { const j = Math.floor(rng0() * (i + 1)); [shopPool[i], shopPool[j]] = [shopPool[j], shopPool[i]]; }
+  const names = ['あなたの店'].concat(shopPool.slice(0, 4));
+  const teams = names.map((n, i) => newTeam(P, n, String(i)));
+  const town = makeTown(P, teams.length);
+  return { P, town, teams, aiIdx, aiProfiles, turn: 0, rng: mkRng(seed * 7 + 3), lastPub: null };
+}
+
+/* ---------- 1期を進める（人間の決定 + AIの決定 → 本番と同じrunTurnで判定） ---------- */
+function soloPlayTurn(state, humanDecision) {
+  const { P, town, teams, aiIdx, aiProfiles } = state;
+  const turn = state.turn + 1;
+  const pub = state.lastPub || teams.map(() => ({ price: 500, msg: 0, stores: 1, share: 1 / teams.length, top: 80, ad: 30000, rich: 50 }));
+  let leaderIdx = 0;
+  teams.forEach((t, i) => { if (t.cash - t.debt > teams[leaderIdx].cash - teams[leaderIdx].debt) leaderIdx = i; });
+
+  const decs = teams.map((t, i) => {
+    if (i === 0) return humanDecision;
+    const arch = aiProfiles[i - 1];
+    const prevRow = t.hist.length ? t.hist[t.hist.length - 1] : null;
+    return aiDecide(P, t, arch, prevRow, town, pub, leaderIdx, turn, state.rng, i);
+  });
+
+  const res = runTurn(P, town, teams, decs, turn, state.rng);
+  state.turn = turn;
+  state.lastPub = res.rows.map(r => ({ price: r.price, msg: r.msg, stores: r.stores, share: r.share, top: r.top, ad: r.ad, rich: r.rich }));
+  return res;
+}
+/*SOLO-ENGINE-END*/
+
+/* ===================== 状態 ===================== */
+let STATE = null;
+let LAST = null;
+const SMSG = [{n:'認知拡大',s:'認知'},{n:'安さ訴求',s:'安さ'},{n:'話題性訴求',s:'話題'},{n:'味わい訴求',s:'味'}];
+const SER = ['#B8890E','#1B3A6B','#A0322A','#1F6B4F','#5C3C79'];
+const $=s=>document.querySelector(s);
+const yen=v=>(v<0?'−':'')+Math.abs(Math.round(v)).toLocaleString('ja-JP');
+const GO='"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif', MO='"SFMono-Regular",Menlo,monospace';
+
+/* ===================== 開始 ===================== */
+$('#startBtn').onclick=()=>{
+  const sel = $('#turnsSel').value;
+  const turnsOverride = sel==='random' ? null : +sel;
+  STATE = soloNewSession(null, turnsOverride);
+  LAST = null;
+  STATE.sample = null;
+  STATE.seenIdeals = [];
+  STATE.revealed = null;
+  $('#game').style.display='block';
+  $('#debriefWrap').innerHTML='';
+  $('#setupMsg').innerHTML='<div class="note ok">開始しました。住人 '+STATE.town.n.toLocaleString('ja-JP')+'人 ／ 全'+STATE.P.turns+'期。相手の狙いは店名からは分かりません。競合調査を買うと、その期の他店の宣伝費・トッピング費・こってり度が分かります。</div>';
+  status();
+  nextTurnSetup();
+  drawNav(); drawMap();
+};
+function status(){
+  if(!STATE){$('#hstat').textContent='未開始';return;}
+  $('#hstat').innerHTML='第 <b>'+Math.min(STATE.turn+1,STATE.P.turns)+'</b> 期 ／ 全'+STATE.P.turns+'期';
+}
+
+/* ===================== 効果音（期の確定時に鳴らすチャイム） ===================== */
+let ACTX=null;
+function chime(ok){
+  try{
+    if(!ACTX) ACTX = new (window.AudioContext||window.webkitAudioContext)();
+    if(ACTX.state==='suspended') ACTX.resume();
+    const t0=ACTX.currentTime;
+    const notes = ok ? [880,1108,1318] : [660,554];
+    notes.forEach((f,i)=>{
+      const osc=ACTX.createOscillator(), g=ACTX.createGain();
+      osc.type='sine'; osc.frequency.value=f;
+      const start=t0+i*0.09, dur=0.30;
+      g.gain.setValueAtTime(0,start);
+      g.gain.linearRampToValueAtTime(0.16,start+0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001,start+dur);
+      osc.connect(g); g.connect(ACTX.destination);
+      osc.start(start); osc.stop(start+dur+0.02);
+    });
+  }catch(e){/* 音声非対応環境では無視 */}
+}
+
+/* ===================== 毎期の準備 ===================== */
+let DEC={buy:600,price:500,top:80,ad:30000,msg:0,rich:50,research:0,rival:0,open:0};
+function nextTurnSetup(){
+  const P=STATE.P;
+  STATE.sample = survey(STATE.town, P.resFree, STATE.rng);
+  STATE.sample.forEach(r=>STATE.seenIdeals.push(r[3]));
+  const c=[0,0,0]; STATE.sample.forEach(r=>c[r[0]===1?0:(r[1]===1?1:2)]++);
+  $('#sampleCap').textContent = '第'+(STATE.turn+1)+'期。標本'+STATE.sample.length+'人。';
+  buildRivalTbl();
+  buildDecBox();
+  drawHist();
+  $('#turnMsg').innerHTML='';
+  $('#confirmBtn').disabled=false;
+  status();
+}
+function buildRivalTbl(){
+  const pub = STATE.lastPub;
+  if(!pub){ $('#rivalTbl').innerHTML='<tbody><tr><td colspan="5" style="color:var(--ink-3);text-align:left">第1期はまだ情報がありません</td></tr></tbody>'; $('#revealNote').style.display='none'; return; }
+  const rv = STATE.revealed;
+  const H = rv ? ['店','価格','訴求','店舗数','シェア','宣伝費','ﾄｯﾋﾟﾝｸﾞ','こってり'] : ['店','価格','訴求','店舗数','シェア'];
+  $('#rivalTbl').innerHTML='<thead><tr>'+H.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+
+    STATE.teams.map((t,i)=>{ if(i===0)return ''; const r=pub[i];
+      let extra='';
+      if(rv){ const d=rv.data.find(x=>x.name===t.name); extra = d ? '<td>'+yen(d.ad)+'</td><td>'+yen(d.top)+'</td><td>'+d.rich+'</td>' : '<td>-</td><td>-</td><td>-</td>'; }
+      return '<tr><td>'+t.name+'</td><td>'+r.price+'</td><td>'+SMSG[r.msg].n+'</td><td>'+r.stores+'</td><td>'+(100*r.share).toFixed(1)+'%</td>'+extra+'</tr>'; }).join('')+'</tbody>';
+  if(rv){ $('#revealNote').style.display='block'; $('#revealNote').textContent='宣伝費・トッピング・こってり度は第'+rv.turn+'期に買った競合調査の結果です。その後変わっている可能性があります。'; }
+  else $('#revealNote').style.display='none';
+}
+function buildDecBox(){
+  const P=STATE.P;
+  const S=(id,lab,hint,min,max,step)=>
+    '<div class="fld"><div class="rowv"><label class="fl" for="d_'+id+'">'+lab+'<small>'+hint+'</small></label>'+
+    '<b id="v_'+id+'"></b></div><input type="range" id="d_'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+DEC[id]+'">'+
+    '<input type="number" id="n_'+id+'" value="'+DEC[id]+'" step="'+step+'" style="margin-top:4px"></div>';
+  $('#decBox').innerHTML=
+    S('buy','仕入数','食',0,P.buyCap*2,10)+
+    S('price','販売価格','円。下限'+P.priceFloor+'円',P.priceFloor,1000,10)+
+    S('top','トッピング費','円／食',0,400,10)+
+    S('ad','宣伝費','円',0,250000,5000)+
+    S('rich','こってり度','0=あっさり 100=こってり',0,100,1)+
+    '<div class="fld"><label class="fl">宣伝の訴求内容</label><div class="msgpick" id="msgPick">'+
+    SMSG.map((m,i)=>'<button data-m="'+i+'" aria-pressed="'+(DEC.msg===i)+'"><b>'+m.n+'</b></button>').join('')+'</div></div>'+
+    '<div class="fld"><label class="fl">追加で買うもの</label>'+
+    '<label style="display:block;font-size:12.5px"><input type="checkbox" id="d_rival"> 競合調査 '+yen(P.resRival)+'円<small style="display:inline;margin-left:4px;color:var(--ink-3)">他店の宣伝費・トッピング・こってり度と、市場ポジション図が分かります</small></label>'+
+    '<label style="display:block;font-size:12.5px"><input type="checkbox" id="d_open"'+(STATE.teams[0].stores>1?' disabled':'')+'> 2号店を出す '+yen(P.storeCost)+'円</label>'+
+    '<label class="fl" style="margin-top:8px" for="d_research">市場調査の追加購入（円）<small>約 '+(1000*P.resN1/P.res1).toFixed(1)+'人ぶん／1000円</small></label>'+
+    '<input type="number" id="d_research" value="'+DEC.research+'" step="5000"></div>';
+  ['buy','price','top','ad','rich'].forEach(k=>{
+    const r=$('#d_'+k), n=$('#n_'+k);
+    const set=v=>{DEC[k]=+v; r.value=v; n.value=v; $('#v_'+k).textContent=(k==='rich'?v:yen(v))+(k==='buy'?' 食':k==='rich'?'':' 円');};
+    r.oninput=e=>set(e.target.value); n.oninput=e=>set(e.target.value); set(DEC[k]);
+  });
+  $('#msgPick').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    DEC.msg=+b.dataset.m; $('#msgPick').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  });
+  $('#d_rival').onchange=e=>DEC.rival=e.target.checked?1:0;
+  $('#d_open').onchange=e=>DEC.open=e.target.checked?1:0;
+  $('#d_research').oninput=e=>DEC.research=+e.target.value||0;
+}
+function drawHist(){
+  const cv=$('#cHist'); const {x,w,h}=prepC(cv,180);
+  const L=8,R=w-8,T=10,B=h-26,PW=R-L;
+  const NB=20, bins=new Array(NB).fill(0);
+  STATE.sample.forEach(r=>bins[Math.min(NB-1,Math.floor(r[3]/100*NB))]++);
+  const mx=Math.max(...bins)||1;
+  bins.forEach((v,i)=>{const bw=PW/NB,bx=L+i*bw,bh=(B-T)*v/mx; x.fillStyle='rgba(27,58,107,.20)'; x.fillRect(bx+1,B-bh,bw-2,bh);});
+  x.strokeStyle='#C6CCD5'; x.lineWidth=1; x.beginPath(); x.moveTo(L,B); x.lineTo(R,B); x.stroke();
+  x.fillStyle='#6B7893'; x.font='10.5px '+MO;
+  x.textAlign='left'; x.fillText('0 あっさり',L,B+14);
+  x.textAlign='right'; x.fillText('こってり 100',R,B+14);
+}
+
+/* ===================== 確定 ===================== */
+$('#confirmBtn').onclick=()=>{
+  $('#confirmBtn').disabled=true;
+  const boughtRival = DEC.rival===1;
+  const res = soloPlayTurn(STATE, {buy:DEC.buy,price:DEC.price,top:DEC.top,ad:DEC.ad,msg:DEC.msg,rich:DEC.rich,
+    research:DEC.research,rival:DEC.rival,open:DEC.open});
+  LAST=res;
+  if(boughtRival && res.rows[0].rival){
+    STATE.revealed = { turn: res.turn, data: res.rows.filter(r=>r.name!=='あなたの店').map(r=>({name:r.name, ad:r.ad, top:r.top, rich:r.rich})) };
+  }
+  chime(true);
+  renderResult(res);
+  drawNav(); drawMap();
+  if(STATE.turn>=STATE.P.turns){
+    $('#turnMsg').innerHTML='<div class="note ok">最終期が終わりました。下に最終講評を表示します。</div>';
+    renderDebrief();
+  } else {
+    nextTurnSetup();
+  }
+};
+function renderResult(res){
+  const rows=res.rows.slice().sort((a,b)=>b.nav-a.nav);
+  const you=res.rows[0];
+  const myRank=rows.findIndex(r=>r.name===res.rows[0].name)+1;
+  let html='<div class="hero"><div><div class="k">第'+res.turn+'期　あなたの当期損益</div><div class="v" style="color:'+(you.profit<0?'#E8A19A':'#9FE0C0')+'">'+yen(you.profit)+'</div></div>'+
+    '<div><div class="k">純資産の順位</div><div class="v">'+myRank+'<small style="font-size:14px"> / '+rows.length+'</small></div></div></div>';
+  if(res.ev) html+='<div class="note warn">今期のできごと：'+res.ev.t+'　'+res.ev.d+'</div>';
+  html+='<div class="scroll"><table><thead><tr><th>順位</th><th>店</th><th>価格</th><th>訴求</th><th>シェア</th><th>純資産</th></tr></thead><tbody>'+
+    rows.map((r,i)=>'<tr'+(r.name===you.name?' style="font-weight:700"':'')+'><td>'+(i+1)+'</td><td>'+r.name+'</td><td>'+r.price+'</td><td>'+SMSG[r.msg].n+'</td><td>'+(100*r.share).toFixed(1)+'%</td><td>'+yen(r.nav)+'</td></tr>').join('')+
+    '</tbody></table></div>';
+  html+='<table class="pl" style="margin-top:12px"><tbody>'+
+    ['rev','cogs','topc','fixed','ad'].map(k=>{
+      const lab={rev:'売上高',cogs:'原材料費',topc:'トッピング費',fixed:'固定費',ad:'宣伝費'}[k];
+      const v = k==='rev'?you[k]:-you[k];
+      return '<tr><td>'+lab+'</td><td class="'+(v<0?'neg':'')+'">'+yen(v)+'</td></tr>';
+    }).join('')+
+    (you.res?'<tr><td>調査費</td><td class="neg">'+yen(-you.res)+'</td></tr>':'')+
+    (you.openc?'<tr><td>出店費</td><td class="neg">'+yen(-you.openc)+'</td></tr>':'')+
+    '<tr><td>支払利息</td><td class="'+(you.interest?'neg':'')+'">'+yen(-you.interest)+'</td></tr>'+
+    '<tr class="sum"><td>当期損益</td><td class="'+(you.profit<0?'neg':'pos')+'">'+yen(you.profit)+'</td></tr>'+
+    '<tr><td>現金</td><td>'+yen(you.cash)+'</td></tr><tr><td>借入残高</td><td>'+yen(you.debt)+'</td></tr>'+
+    '<tr><td>繰越在庫</td><td>'+you.inv+' 食</td></tr>'+
+    (you.lost>0?'<tr><td>品切れによる機会損失</td><td class="neg">'+you.lost+' 食</td></tr>':'')+
+    '</tbody></table>';
+  $('#resultBox').innerHTML=html;
+}
+
+/* ===================== グラフ（GMコンソールと同じ描画ロジック） ===================== */
+function prepC(cv,h){const dpr=devicePixelRatio||1,w=cv.clientWidth||600;
+  cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+'px';
+  const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);x.textBaseline='middle';return{x,w,h};}
+function spread(want,gap,lo,hi){
+  const idx=want.map((v,i)=>i).sort((a,b)=>want[a]-want[b]); const y=want.slice();
+  for(const i of idx)y[i]=Math.max(lo,Math.min(hi,y[i]));
+  for(let k=1;k<idx.length;k++){const a=idx[k-1],b=idx[k];if(y[b]-y[a]<gap)y[b]=y[a]+gap;}
+  const L=idx[idx.length-1];
+  if(y[L]>hi){y[L]=hi;for(let k=idx.length-2;k>=0;k--){const a=idx[k],b=idx[k+1];if(y[b]-y[a]<gap)y[a]=y[b]-gap;}}
+  return y;
+}
+function drawNav(){
+  const cv=$('#cNav'); if(!cv||!STATE||!STATE.teams[0].hist.length)return;
+  const {x,w,h}=prepC(cv,260);
+  const N=STATE.teams[0].hist.length, L=76,R=w-96,T=14,B=h-30,PW=R-L,PH=B-T;
+  const series=STATE.teams.map(t=>[STATE.P.cash0].concat(t.hist.map(r=>r.nav)));
+  let lo=Infinity,hi=-Infinity; series.forEach(a=>a.forEach(v=>{if(v<lo)lo=v;if(v>hi)hi=v;}));
+  const pad=(hi-lo)*0.12||1e5; lo-=pad; hi+=pad;
+  const X=t=>L+PW*t/N, Y=v=>B-PH*(v-lo)/(hi-lo);
+  x.strokeStyle='#E7EAEE';x.fillStyle='#8B95A8';x.font='10.5px '+MO;x.textAlign='right';
+  for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4,y=Y(v); x.beginPath();x.moveTo(L,y);x.lineTo(R,y);x.stroke();x.fillText(yen(v),L-8,y);}
+  const zy=Y(0); if(zy>T&&zy<B){x.strokeStyle='#C6A6A2';x.setLineDash([3,3]);x.beginPath();x.moveTo(L,zy);x.lineTo(R,zy);x.stroke();x.setLineDash([]);}
+  x.textAlign='center'; for(let t=0;t<=N;t++) x.fillText(t===0?'開始':t,X(t),B+14);
+  const ends=[];
+  series.forEach((a,j)=>{x.strokeStyle=SER[j%5];x.lineWidth=j===0?2.6:1.6;x.beginPath();
+    a.forEach((v,t)=>{t?x.lineTo(X(t),Y(v)):x.moveTo(X(t),Y(v));});x.stroke();ends.push(Y(a[a.length-1]));});
+  const ly=spread(ends.slice(),14,T+6,B-2);
+  STATE.teams.forEach((t,j)=>{x.strokeStyle=SER[j%5];x.lineWidth=1;
+    x.beginPath();x.moveTo(R,ends[j]);x.lineTo(R+5,ly[j]);x.stroke();
+    x.fillStyle=SER[j%5];x.font=(j===0?'bold ':'')+'11px '+GO;x.textAlign='left';x.fillText(t.name,R+8,ly[j]);});
+}
+function kernelDensity(vals){
+  const sm=new Float64Array(101);
+  if(!vals.length) return sm;
+  const bw = vals.length<40 ? 10 : (vals.length<150 ? 7 : 5);
+  for(let x=0;x<=100;x++){
+    let s=0;
+    for(let i=0;i<vals.length;i++){ const z=(vals[i]-x)/bw; s+=Math.exp(-0.5*z*z); }
+    sm[x]=s/vals.length;
+  }
+  return sm;
+}
+function drawMap(){
+  const cv=$('#cMap'); if(!cv||!LAST||!STATE)return;
+  if(!STATE.revealed){
+    $('#mapLocked').style.display='block';
+    cv.style.display='none';
+    $('#mapCap').style.display='none';
+    return;
+  }
+  $('#mapLocked').style.display='none';
+  cv.style.display='block';
+  $('#mapCap').style.display='block';
+  const {x,w,h}=prepC(cv,260);
+  const L=36,R=w-14,T=22,B=h-34,PW=R-L,PH=B-T;
+  const sm=kernelDensity(STATE.seenIdeals), mx=Math.max(...sm)||1;
+  const X=v=>L+PW*v/100, Y=v=>B-PH*0.60*v/mx;
+  x.beginPath();x.moveTo(L,B);for(let i=0;i<=100;i++)x.lineTo(X(i),Y(sm[i]));x.lineTo(R,B);x.closePath();
+  const g=x.createLinearGradient(0,T,0,B);g.addColorStop(0,'rgba(27,58,107,.20)');g.addColorStop(1,'rgba(27,58,107,.05)');
+  x.fillStyle=g;x.fill();
+  x.strokeStyle='#1B3A6B';x.lineWidth=1.4;x.beginPath();
+  for(let i=0;i<=100;i++){const px=X(i),py=Y(sm[i]);i?x.lineTo(px,py):x.moveTo(px,py);}x.stroke();
+  x.strokeStyle='#C6CCD5';x.lineWidth=1;x.beginPath();x.moveTo(L,B);x.lineTo(R,B);x.stroke();
+  x.fillStyle='#6B7893';x.font='10.5px '+MO;x.textAlign='center';
+  [0,25,50,75,100].forEach(v=>x.fillText(v,X(v),B+14));
+  x.font='11px '+GO;x.textAlign='left';x.fillText('あっさり',L,B+28);
+  x.textAlign='right';x.fillText('こってり',R,B+28);
+
+  // 自分の旗と、競合調査で分かった他店だけを表示する（rvは必ず存在する。ここに来る時点で購入済み）
+  const rv = STATE.revealed;
+  const visibleRows = LAST.rows.filter(r => r.name==='あなたの店' || rv.data.some(d=>d.name===r.name));
+  $('#mapCap').textContent = '地形はこれまでの市場調査から見た、味の好みの分布（本当の分布とは少しズレます）。他店の位置は第'+rv.turn+'期の競合調査の結果です。';
+  if(!visibleRows.length) return;
+  const maxS=Math.max(...LAST.rows.map(r=>r.share))||1;
+  const ord=visibleRows.map((r,i)=>i).sort((a,b)=>visibleRows[a].rich-visibleRows[b].rich);
+  const geo=ord.map(j=>{const r=visibleRows[j],px=X(r.rich),gy=Y(sm[Math.round(r.rich)]);
+    return {j,px,gy,top:gy-(22+PH*0.32*(r.share/maxS))};});
+  const lab=spread(geo.map(o=>o.top+6),19,T+8,B-12);
+  const items=geo.map((o,k)=>{
+    const r=visibleRows[o.j], isYou=r.name==='あなたの店';
+    const col=isYou?'#B8890E':SER[(LAST.rows.findIndex(x=>x.name===r.name))%5];
+    const t=r.name+'  '+(100*r.share).toFixed(1)+'%';
+    x.font=(isYou?'bold ':'')+'11.5px '+GO; const tw=x.measureText(t).width;
+    return {o,r,col,t,tw,ly:lab[k],right:true,lx:0,isYou};
+  });
+  const flagRects=geo.map(o=>({l:o.px-4,r:o.px+27,t:o.top-4,b:o.top+19}));
+  const hit=(a,b)=>a.l<b.r&&a.r>b.l&&a.t<b.b&&a.b>b.t;
+  const rectFor=(it,right,lx)=>right?{l:lx-4,r:lx+it.tw+4,t:it.ly-10,b:it.ly+10}:{l:lx-it.tw-4,r:lx+4,t:it.ly-10,b:it.ly+10};
+  const placed=[];
+  items.forEach((it,idx)=>{
+    const o=it.o, prefRight=o.px+26+it.tw<R;
+    const sides=prefRight?[true,false]:[false,true];
+    let chosen=null;
+    for(const right of sides){
+      for(let push=0;push<=Math.max(PW,400)&&!chosen;push+=8){
+        const lx=right?o.px+25+push:o.px-6-push;
+        const rect=rectFor(it,right,lx);
+        if(rect.l<L||rect.r>R)continue;
+        let ok=true;
+        for(let fi=0;fi<flagRects.length;fi++){if(fi!==idx&&hit(rect,flagRects[fi])){ok=false;break;}}
+        if(ok)for(const p of placed){if(hit(rect,p)){ok=false;break;}}
+        if(ok){chosen={right,lx,rect};break;}
+      }
+      if(chosen)break;
+    }
+    if(!chosen){const right=prefRight,lx=right?o.px+25:o.px-6;chosen={right,lx,rect:rectFor(it,right,lx)};}
+    it.right=chosen.right; it.lx=chosen.lx; placed.push(chosen.rect);
+  });
+  items.forEach(it=>{
+    const o=it.o, col=it.col, t=it.t, tw=it.tw, right=it.right, lx=it.lx, ly=it.ly;
+    x.strokeStyle='#16233D';x.lineWidth=1.2;x.beginPath();x.moveTo(o.px,o.gy);x.lineTo(o.px,o.top);x.stroke();
+    x.fillStyle=col;x.beginPath();x.moveTo(o.px,o.top);x.lineTo(o.px+21,o.top+6);x.lineTo(o.px,o.top+12);x.closePath();x.fill();
+    x.fillStyle='#16233D';x.beginPath();x.arc(o.px,o.gy,2.6,0,7);x.fill();
+    x.font=(it.isYou?'bold ':'')+'11.5px '+GO;
+    if(Math.abs(ly-(o.top+6))>2||Math.abs(lx-(right?o.px+25:o.px-6))>2){
+      x.strokeStyle='#AEB6C2';x.lineWidth=1;
+      x.beginPath();x.moveTo(o.px+(right?21:0),o.top+6);x.lineTo(lx+(right?-2:2),ly);x.stroke();
+    }
+    x.fillStyle='rgba(252,252,251,.92)';x.fillRect(right?lx-3:lx-tw-3,ly-8,tw+6,16);
+    x.textAlign=right?'left':'right';x.fillStyle=col;x.fillText(t,lx,ly);
+  });
+}
+
+/* ===================== 最終講評 ===================== */
+function renderDebrief(){
+  const A = analyze(STATE.P, STATE.town, STATE.teams);
+  const fs = A.firstShare.map(v=>(100*v).toFixed(0));
+  const big=['価格','宣伝','味覚'][A.firstShare.indexOf(Math.max(...A.firstShare))];
+  const you = A.rank.find(r=>r.name==='あなたの店');
+  let html = '<section><h2>最終講評</h2><div class="b">';
+  html += '<div class="note ok"><b>この街の正体</b>　需要がいちばん厚かったのは こってり度 '+A.peak+' 付近。'+
+    '第1志向は 価格 '+fs[0]+'％／宣伝 '+fs[1]+'％／味覚 '+fs[2]+'％ で、最大勢力は<b>'+big+'志向</b>でした。</div>';
+  A.rank.forEach(r=>{
+    const posMsg = r.posErr<=8 ? '需要の山をほぼ正確に捉えていました。'
+      : (r.posDrift>=15 && r.posGap<=12) ? '平均位置は山から '+r.posGap+' しか離れていないのに、期ごとのブレが '+r.posDrift+' もあります。位置を毎期変えると常連を失います。'
+      : (r.posErr<=18 ? '山からやや外れた位置で安定していました。' : '山から離れたところに構え続けました。ここが客数の伸びない主因です。');
+    let bridge='';
+    if(r.bridge){
+      const parts=[['qty','売った数の差'],['price','1食あたり粗利の差'],['ad','宣伝費の差'],['res','調査費の差'],['fix','固定費の差'],['int','利息の差'],['inv','在庫評価の差']];
+      const mx=Math.max(...parts.map(([k])=>Math.abs(r.bridge[k])))||1;
+      bridge='<div style="margin-top:10px;font-size:12.5px"><div style="color:var(--ink-3);margin-bottom:5px">優勝「'+A.winner+'」との純資産の差 '+yen(r.bridge.total)+'円 の内訳</div>'+
+        parts.map(([k,l])=>{const v=r.bridge[k],wd=Math.abs(v)/mx*100;
+          return '<div style="display:grid;grid-template-columns:96px 1fr 84px;gap:8px;align-items:center;margin:3px 0">'+
+            '<span style="color:var(--ink-2)">'+l+'</span><span style="display:block;position:relative;height:13px;background:#EFF1F3">'+
+            '<i style="display:block;height:13px;width:'+wd+'%;background:'+(v<0?'#C0736C':'#1F6B4F')+'"></i></span>'+
+            '<span class="'+(v<0?'neg':'pos')+'">'+yen(v)+'</span></div>';}).join('')+'</div>';
+    }
+    html += '<div class="card'+(r.name==='あなたの店'?'' : '')+'"><h3>'+r.rank+'位　'+r.name+(r.isWinner?'　🏆':'')+'<span>純資産 '+yen(r.nav)+'</span></h3><div class="cb">'+
+      '<div class="note"><b>味の位置取り</b>　平均こってり度 '+r.richAvg+'、真の山は '+A.peak+'。'+posMsg+'</div>'+
+      '<div class="note"><b>需給の合わせ方</b>　'+(r.lost>0?'品切れで '+r.lost.toLocaleString('ja-JP')+'食 を取りこぼしています（'+yen(r.lost*r.gmUnit)+'円 相当の粗利）。':'品切れによる取りこぼしはありませんでした。')+'</div>'+
+      bridge+'</div></div>';
+  });
+  html += '</div></section>';
+  $('#debriefWrap').innerHTML = html;
+  $('#debriefWrap').scrollIntoView({behavior:'smooth'});
+}
+
+addEventListener('resize',()=>{ if(STATE){drawNav(); drawMap();} });
+</script>
+</body>
+</html>
