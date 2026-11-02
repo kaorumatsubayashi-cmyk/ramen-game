@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta name="ramen-version" content="v1102d">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ラーメン経営ゲーム｜作戦シミュレーター</title>
 <style>
@@ -106,8 +107,17 @@ canvas{display:block;width:100%}
 </div></header>
 
 <main>
+  <!-- 読み込み -->
+  <section><h2>配られたシートを読み込む <em>まずここから。数字を手で写す必要はありません</em></h2>
+    <div class="b">
+      <p style="margin:0 0 10px;font-size:13px">自分のチームのシートを開き、<b>いちばん新しい期のタブ</b>（第1期の作戦を立てるときは<b>「公開情報」タブ</b>）を選びます。⌘+A（WindowsはCtrl+A）で全体を選んで⌘+C（Ctrl+C）でコピーし、下の欄に貼って「読み込む」を押してください。ゲームの設定・いまの状況・他店の公開情報・市場調査が、下の欄にまとめて入ります。</p>
+      <textarea id="loadArea" spellcheck="false" style="min-height:90px" placeholder="ここにシートの中身を貼る"></textarea>
+      <div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap"><button class="btn" id="loadBtn">読み込む</button><button class="gh" id="loadClear">読み込んだデータを消す</button></div>
+      <div id="loadMsg"></div>
+    </div>
+  </section>
   <!-- 状況 -->
-  <section><h2>いまの状況 <em>ゲームマスターから配られた決算値を入れてください</em></h2>
+  <section><h2>いまの状況 <em>読み込むと自動で入ります。手で直すこともできます</em></h2>
     <div class="b"><div class="grid g4" id="stateBox"></div></div>
   </section>
 
@@ -116,14 +126,15 @@ canvas{display:block;width:100%}
     <div class="b">
       <div class="split">
         <div>
-          <label class="fl" for="raw">調査結果を貼り付け
-            <small>1行1人。「価格順位, 宣伝順位, 味覚順位, 理想こってり度」の4列（先頭にID列があっても可）。Excelからそのままコピーできます。</small></label>
+          <label class="fl" for="raw">調査結果
+            <small>シートを読み込むと自動で入ります。手で貼るときは1行1人、「価格順位, 宣伝順位, 味覚順位, 理想こってり度」の4列です。</small></label>
           <textarea id="raw" spellcheck="false" placeholder="1,3,2,68&#10;2,1,3,41&#10;3,2,1,77"></textarea>
           <div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap">
             <button class="gh" id="demo20">練習用に20人分つくる</button>
             <button class="gh" id="demo200">200人分つくる</button>
           </div>
           <div id="sampleStat" class="cap"></div>
+          <div id="surveyList"></div>
         </div>
         <div>
           <canvas id="cHist" height="255"></canvas>
@@ -142,7 +153,7 @@ canvas{display:block;width:100%}
         <button class="gh" id="addRival">＋ 他店を追加</button>
         <button class="gh" id="delRival">− 減らす</button>
       </div>
-      <div class="note">灰色の列は<strong>本当は見えない値</strong>です。ここに何を入れるかで予測は変わります。外れたと思ったら、前期の実績シェアと突き合わせて想定を直してください。競合調査を買えば実際の値が分かります。</div>
+      <div class="note">灰色の列は<strong>本当は見えない値</strong>です。ここに何を入れるかで予測は変わります。外れたと思ったら、前期の実績シェアと突き合わせて想定を直してください。競合調査を買った期のタブを読み込むと、実際の値が入ります（その後変わっている可能性はあります）。</div>
     </div>
   </section>
 
@@ -161,8 +172,19 @@ canvas{display:block;width:100%}
     </div>
   </section>
 
+  <!-- 経営アドバイザー -->
+  <section><h2>経営アドバイザー <em>AIに相談して、数字の意味や考え方のヒントをもらう</em></h2>
+    <div class="b">
+      <p style="margin:0 0 12px;font-size:13px">この画面に入っている状況・市場調査・他店の想定・今期の決定と予測、それに最後に読み込んだシートの中身をまとめて、AIへの相談文をつくります。「アドバイザー用にコピー」を押して、ChatGPT・Claude・Geminiなどに貼り付けて送ってください。アドバイザーは答えを決めつけず、数字の意味や「こう考えるなら、こういう手もある」というヒントを返します。決めるのはあなたです。</p>
+      <label class="fl" for="advQ">アドバイザーに聞きたいこと（なくてもよい）<small>例：損益分岐点ってなに？／品切れと売れ残り、どちらを気にするべき？</small></label>
+      <textarea id="advQ" spellcheck="false" style="min-height:80px"></textarea>
+      <div style="display:flex;gap:7px;margin-top:10px"><button class="btn" id="advCopy">アドバイザー用にコピー</button></div>
+      <div id="advMsg"></div>
+      <div class="note warn">相談文にはあなたの店の作戦が入っています。ほかのチームの人に見せないようにしましょう。</div>
+    </div>
+  </section>
   <!-- 提出 -->
-  <section><h2>提出 <em>この行をゲームマスターに送ってください</em></h2>
+  <section><h2>提出する値の控え <em>この値を提出フォームに入れてください</em></h2>
     <div class="b">
       <div class="code" id="submit"></div>
       <div style="display:flex;gap:7px;margin-top:10px"><button class="btn" id="copy">コピーする</button></div>
@@ -170,9 +192,10 @@ canvas{display:block;width:100%}
   </section>
 
   <!-- 設定 -->
-  <section><details><summary>ゲームの共通設定 <span class="pill">GMの設定と合わせること</span></summary>
+  <section><details><summary>ゲームの共通設定 <span class="pill">ゲームマスターの設定と合わせること</span></summary>
     <div class="b"><div class="grid g4" id="cfgBox"></div>
-      <div class="note">ここがGMの「設定」タブと違っていると、予測はいくら精密でも当たりません。初回に必ず読み合わせてください。</div>
+      <div id="cfgMsg"></div>
+      <div class="note">ここがゲームマスターの設定と違っていると、予測はいくら精密でも当たりません。シートを読み込むと自動で入ります。</div>
     </div>
   </details></section>
 </main>
@@ -185,8 +208,11 @@ const CFG = {
   tasteSens:1.4, tau:0.15, topK:80,
   awareBase:0.25, awareMax:0.97, awareK:35000, buzzK:15000, storeBonus:0.10,
   msgStrong:1.60, msgWeak:0.55, msgBonus:0.06,
-  rate:0.05, creditBase:300000, creditMult:1.0, storeCost:200000
+  rate:0.05, creditBase:300000, creditMult:1.0, storeCost:200000,
+  cash0:500000, res1:15000, resN1:80, resRival:25000,
+  turns:10, resFree:20, events:1
 };
+let GAME_ID='';   // 読み込んだシートのゲーム番号（別のゲームの調査を混ぜないため）
 const CFG_FIELDS = [
   ['players','参加店舗数'],['popPer','1店あたり住人数'],['cost','原材料費'],['priceFloor','価格の下限'],
   ['priceRef','価格評価が0になる額'],['labor','人件費'],['sga','販管費'],['buyCap','仕入上限'],
@@ -194,8 +220,23 @@ const CFG_FIELDS = [
   ['awareBase','宣伝ゼロの認知率'],['awareMax','認知率の上限'],['awareK','宣伝の効き(認知)'],
   ['buzzK','宣伝の効き(話題)'],['storeBonus','2号店の認知加算'],
   ['msgStrong','訴求が刺さる層への倍率'],['msgWeak','それ以外への倍率'],['msgBonus','訴求の好感度'],
-  ['rate','金利'],['creditBase','借入枠の基礎'],['creditMult','剰余金による上乗せ'],['storeCost','出店費用']
+  ['rate','金利'],['creditBase','借入枠の基礎'],['creditMult','剰余金による上乗せ'],['storeCost','出店費用'],
+  ['cash0','初期現金'],['res1','追加調査の費用'],['resN1','追加調査の人数'],['resRival','競合調査の費用'],
+  ['turns','ゲームの期数'],['resFree','毎期の無料調査（人）'],['events','ランダムなできごと（1=起きる 0=起きない）']
 ];
+// 手で直したときに、計算が壊れる値を受け付けない
+const CFG_RANGE={players:[2,8],popPer:[1,1e6],cost:[0,1e6],priceFloor:[0,1e6],priceRef:[1,1e6],labor:[0,1e7],sga:[0,1e7],buyCap:[1,1e6],
+  tasteSens:[0,100],tau:[0.0001,10],topK:[0.0001,1e7],awareBase:[0,0.99],awareMax:[0.01,1],awareK:[1,1e8],buzzK:[1,1e8],storeBonus:[0,1],
+  msgStrong:[0,10],msgWeak:[0,10],msgBonus:[0,10],rate:[0,1],creditBase:[0,1e9],creditMult:[0,100],storeCost:[0,1e9],cash0:[0,1e9],
+  res1:[1,1e8],resN1:[1,1e6],resRival:[0,1e8],turns:[1,30],resFree:[0,10000],events:[0,1]};
+function cfgProblem(k,v,C){
+  if(!Number.isFinite(v))return '数字を入れてください';
+  const r=CFG_RANGE[k]; if(r&&(v<r[0]||v>r[1]))return r[0]+'〜'+r[1]+'の範囲で入れてください';
+  if((k==='priceRef'||k==='priceFloor')&&(k==='priceRef'?v:C.priceRef)<=(k==='priceFloor'?v:C.priceFloor))return '「価格評価が0になる額」は「価格の下限」より大きくしてください';
+  if((k==='awareMax'||k==='awareBase')&&(k==='awareMax'?v:C.awareMax)<=(k==='awareBase'?v:C.awareBase))return '「認知率の上限」は「宣伝ゼロの認知率」より大きくしてください';
+  if(k==='players'&&Math.round(v)!==v)return '整数で入れてください';
+  return '';
+}
 const MESSAGES = [
   {n:'認知拡大',h:'広く浅く'},{n:'安さ訴求',h:'価格志向へ'},
   {n:'話題性訴求',h:'宣伝志向へ'},{n:'味わい訴求',h:'味覚志向へ'}
@@ -228,7 +269,7 @@ function offerOf(o){
 }
 function awareOf(f,first){
   const mf = f.msg===0?1:(f.msg-1===first?CFG.msgStrong:CFG.msgWeak);
-  let p = CFG.awareBase + f.gain*mf + f.bonus;
+  let p = CFG.awareBase + (f.gain + f.bonus)*mf;
   return p>CFG.awareMax?CFG.awareMax:p;
 }
 function utilOf(f,c){
@@ -273,7 +314,8 @@ function estimate(){
   const n=SAMPLE.length;
   if(!n) return null;
   const pop=CFG.players*CFG.popPer;
-  const mine={price:DEC.price,top:DEC.top,ad:DEC.ad,msg:DEC.msg,rich:DEC.rich,stores:ST.stores+(DEC.open?1:0)};
+  const D=EFF();
+  const mine={price:D.price,top:D.top,ad:D.ad,msg:D.msg,rich:D.rich,stores:ST.stores+(D.open?1:0)};
   const p=winProbs(mine,RIVALS,140);
   let m=0; for(let i=0;i<n;i++)m+=p[i]; m/=n;
   // ブートストラップで標本誤差の幅を出す
@@ -289,7 +331,8 @@ function estimate(){
 function assumptionRisk(){
   if(!SAMPLE.length||!RIVALS.length) return null;
   const rng=rngFactory(12345), S=11, pop=CFG.players*CFG.popPer;
-  const mine={price:DEC.price,top:DEC.top,ad:DEC.ad,msg:DEC.msg,rich:DEC.rich,stores:ST.stores+(DEC.open?1:0)};
+  const D=EFF();
+  const mine={price:D.price,top:D.top,ad:D.ad,msg:D.msg,rich:D.rich,stores:ST.stores+(D.open?1:0)};
   const arr=[];
   for(let k=0;k<S;k++){
     const rv=RIVALS.map(r=>({name:r.name,price:r.price,msg:r.msg,stores:r.stores,
@@ -304,31 +347,61 @@ function assumptionRisk(){
   return {lo:arr[1],hi:arr[S-2]};
 }
 
+/* ===== 提出したときに実際に採用される決定（進行コンソールの clampDecision と同じ補正） ===== */
+function clampDec(src){
+  const warn=[];
+  const d={buy:Math.max(0,Math.round(src.buy||0)), price:Math.round(src.price||CFG.priceFloor),
+    top:Math.max(0,Math.round(src.top||0)), ad:Math.max(0,Math.round(src.ad||0)), msg:src.msg|0,
+    rich:Math.min(100,Math.max(0,Math.round(Number.isFinite(+src.rich)?+src.rich:50))),
+    research:Math.max(0,Math.round(src.research||0)), rival:src.rival?1:0, open:src.open?1:0};
+  if(d.price<CFG.priceFloor){warn.push('価格が下限を下回るため '+CFG.priceFloor+'円 に直されます');d.price=CFG.priceFloor;}
+  if(d.open&&ST.stores>1){warn.push('すでに2店あるため、出店は無効になります');d.open=0;}
+  const stores=ST.stores+d.open;
+  const limit=CFG.creditBase+Math.max(0,ST.retained)*CFG.creditMult;
+  const room=Math.max(0,limit-ST.debt);
+  const hardCap=(ST.cash<=0&&ST.debt>=limit)?CFG.buyCapBroke:CFG.buyCap*stores;
+  if(d.buy>hardCap){warn.push('仕入上限を超えるため '+hardCap+'食 に直されます');d.buy=hardCap;}
+  let fixedOut=d.ad+d.research+(d.rival?CFG.resRival:0)+(d.open?CFG.storeCost:0);
+  if(fixedOut>ST.cash+room){
+    warn.push('宣伝・調査・出店の合計が「現金＋借入枠の残り」を超えるため、出店と調査が取り消され、宣伝費は '+yen(Math.min(d.ad,ST.cash+room))+'円 に削られます');
+    d.open=0;d.rival=0;d.research=0;
+    fixedOut=Math.min(d.ad,ST.cash+room);d.ad=fixedOut;
+  }
+  const canBuy=Math.floor(Math.max(0,ST.cash+room-fixedOut)/CFG.cost);
+  if(d.buy>canBuy){warn.push('資金が足りないため、仕入は '+canBuy+'食 に削られます');d.buy=canBuy;}
+  return {d,warn};
+}
+const EFF=()=>clampDec(DEC).d;
+
 /* ===== 収支 ===== */
 function pnl(demand){
-  const stores=ST.stores+(DEC.open?1:0);
-  const stock=ST.inv+DEC.buy;
+  const D=EFF();
+  const stores=ST.stores+(D.open?1:0);
+  const stock=ST.inv+D.buy;
   const sold=Math.min(Math.round(demand),stock);
-  const rev=sold*DEC.price;
+  const rev=sold*D.price;
   const cogs=sold*CFG.cost;
-  const topc=sold*DEC.top;
+  const topc=sold*D.top;
   const fixed=stores*(CFG.labor+CFG.sga);
-  const res=DEC.research+ (DEC.rival?RES.rival:0);
-  const openc=DEC.open?CFG.storeCost:0;
-  const interest=Math.round(ST.debt*CFG.rate);
-  const profit=rev-cogs-topc-fixed-interest-DEC.ad-res-openc;
-  const out=DEC.buy*CFG.cost+DEC.ad+res+openc;
-  const inFlow=rev-topc-fixed-interest;
-  let cash=ST.cash-out+inFlow, debt=ST.debt;
+  const res=D.research+ (D.rival?CFG.resRival:0);
+  const openc=D.open?CFG.storeCost:0;
+  // 進行エンジンと同じ順番：期のはじめに払い、足りない分は借りる → 利息は借りたあとの残高にかかる → 売上などを足し引きして、まだ足りなければ借りる
+  const out=D.buy*CFG.cost+D.ad+res+openc;
+  let cash=ST.cash-out, debt=ST.debt;
+  if(cash<0){debt+=-cash;cash=0;}
+  const interest=Math.round(debt*CFG.rate);
+  const profit=rev-cogs-topc-fixed-interest-D.ad-res-openc;
+  cash+=rev-topc-fixed-interest;
+  if(cash<0){debt+=-cash;cash=0;}
   const limit=CFG.creditBase+Math.max(0,ST.retained)*CFG.creditMult;
-  if(cash<0){const draw=Math.min(-cash,Math.max(0,limit-debt));debt+=draw;cash+=draw;}
-  const margin=DEC.price-CFG.cost-DEC.top;
+  const limitNext=CFG.creditBase+Math.max(0,ST.retained+profit)*CFG.creditMult;
+  const margin=D.price-CFG.cost-D.top;
   return {sold,stock,rev,cogs,topc,fixed,res,openc,interest,profit,cash,debt,
-    inv:stock-sold, limit, broke:cash<0, margin,
-    be: margin>0 ? Math.ceil((fixed+interest+DEC.ad+res)/margin) : null,
+    inv:stock-sold, limit, limitNext, broke:cash<=0&&debt>=limitNext, margin,
+    be: margin>0 ? Math.ceil((fixed+interest+D.ad+res+openc)/margin) : null, D,
     nav: cash + (stock-sold)*CFG.cost*0.5 - debt};
 }
-const RES={rival:25000};
+
 
 /* ===== 画面の組み立て ===== */
 function num(id,val,step,attrs){return '<input type="number" id="'+id+'" value="'+val+'" step="'+(step||1)+'" '+(attrs||'')+'>';}
@@ -342,7 +415,10 @@ function buildState(){
 function buildCfg(){
   $('#cfgBox').innerHTML=CFG_FIELDS.map(([k,l])=>
     '<div class="fld"><label class="fl" for="c_'+k+'">'+l+'</label>'+num('c_'+k,CFG[k],'any')+'</div>').join('');
-  CFG_FIELDS.forEach(([k])=>$('#c_'+k).oninput=e=>{CFG[k]=+e.target.value;buildRivals();refresh();});
+  CFG_FIELDS.forEach(([k])=>$('#c_'+k).oninput=e=>{
+    const v=+e.target.value, why=e.target.value===''?'数字を入れてください':cfgProblem(k,v,CFG);
+    e.target.style.outline=why?'2px solid #A0322A':''; $('#cfgMsg').innerHTML=why?'<div class="note warn">'+CFG_FIELDS.find(f=>f[0]===k)[1]+'：'+why+'（直すまで、前の値 '+CFG[k]+' で計算します）</div>':'';
+    if(why)return; CFG[k]=v; buildRivals(); refresh();});
 }
 function buildRivals(){
   while(RIVALS.length<CFG.players-1) RIVALS.push({name:'他店'+(RIVALS.length+1),price:500,msg:0,stores:1,ad:35000,top:80,rich:50});
@@ -351,7 +427,7 @@ function buildRivals(){
            '店舗 <span style="color:#B8890E">公開</span>','宣伝費 <i>想定</i>','ﾄｯﾋﾟﾝｸﾞ <i>想定</i>','こってり <i>想定</i>'];
   $('#rivalTbl').innerHTML='<thead><tr>'+H.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+
     RIVALS.map((r,i)=>'<tr>'+
-      '<td><input type="text" id="rn'+i+'" value="'+r.name+'" style="width:88px;text-align:left"></td>'+
+      '<td><input type="text" id="rn'+i+'" value="'+r.name+'" style="width:128px;text-align:left"></td>'+
       '<td>'+num('rp'+i,r.price,10,'style="width:76px"')+'</td>'+
       '<td><select id="rm'+i+'">'+MESSAGES.map((m,k)=>'<option value="'+k+'"'+(r.msg===k?' selected':'')+'>'+m.n+'</option>').join('')+'</select></td>'+
       '<td>'+num('rs'+i,r.stores,1,'style="width:50px"')+'</td>'+
@@ -380,7 +456,7 @@ function buildDec(){
     '<div class="msgpick" id="msgPick">'+MESSAGES.map((m,i)=>
       '<button data-m="'+i+'" aria-pressed="'+(DEC.msg===i)+'"><b>'+m.n+'</b>'+m.h+'</button>').join('')+'</div></div>'+
     '<div class="fld"><label class="fl">追加で買うもの</label>'+
-    '<label style="display:block;font-size:12.5px"><input type="checkbox" id="d_rival"'+(DEC.rival?' checked':'')+'> 競合調査 '+yen(RES.rival)+'円（他店の宣伝費・味・トッピングが分かる）</label>'+
+    '<label style="display:block;font-size:12.5px"><input type="checkbox" id="d_rival"'+(DEC.rival?' checked':'')+'> 競合調査 '+yen(CFG.resRival)+'円（他店の宣伝費・味・トッピングが分かる）</label>'+
     '<label style="display:block;font-size:12.5px"><input type="checkbox" id="d_open"'+(DEC.open?' checked':'')+'> 2号店を出す '+yen(CFG.storeCost)+'円</label>'+
     '<label class="fl" style="margin-top:8px" for="d_research">市場調査の追加購入（円）'+
     '<small>約 '+(1000*CFG.resN1/CFG.res1).toFixed(1)+'人ぶん／1000円。この結果はあなたの店だけに届きます</small></label>'+num('d_research',DEC.research,5000)+'</div>';
@@ -510,7 +586,7 @@ function drawSens(){
   const save=DEC.price, pts=[];
   const lo=CFG.priceFloor, hi=Math.max(CFG.priceFloor+200,Math.min(1500,Math.round(CFG.priceRef*1.6)));
   for(let p=lo;p<=hi;p+=Math.max(10,Math.round((hi-lo)/26))){
-    DEC.price=p; const e=estimate(); pts.push({p,profit:pnl(e.demand).profit,sold:Math.min(Math.round(e.demand),ST.inv+DEC.buy)});
+    DEC.price=p; const e=estimate(); pts.push({p,profit:pnl(e.demand).profit,sold:Math.min(Math.round(e.demand),ST.inv+EFF().buy)});
   }
   DEC.price=save;
   let mn=Infinity,mx=-Infinity;pts.forEach(o=>{if(o.profit<mn)mn=o.profit;if(o.profit>mx)mx=o.profit;});
@@ -562,22 +638,24 @@ function refresh(){
   if(!est){box.innerHTML='<div class="note warn">市場調査データを入れると予測が出ます。</div>';$('#submit').textContent='—';drawSens();return;}
   const f=pnl(est.demand);
   const share=100*est.share, fair=100/CFG.players;
+  const op=$('#d_open'); if(op){op.disabled=ST.stores>1; if(ST.stores>1){op.checked=false;DEC.open=0;}
+    const lb=op.parentNode; if(lb)lb.style.opacity=ST.stores>1?'.5':'';}
   box.innerHTML=
     '<div class="hero">'+
       '<div><div class="k">予測販売数</div><div class="v">'+Math.round(f.sold)+'<small> 食</small></div>'+
       '<div class="ci">需要の見込み '+Math.round(est.dlo)+'〜'+Math.round(est.dhi)+' 食</div></div>'+
       '<div><div class="k">予測当期損益</div><div class="v" style="color:'+(f.profit<0?'#E8A19A':'#9FE0C0')+'">'+yen(f.profit)+'</div>'+
-      '<div class="ci">シェア '+share.toFixed(1)+'%（均等なら '+fair.toFixed(1)+'%）</div></div>'+
+      '<div class="ci">第一希望に選ばれる割合 '+share.toFixed(1)+'%（均等なら '+fair.toFixed(1)+'%）</div></div>'+
     '</div>'+
     '<table class="pl"><tbody>'+
     row('売上高',f.rev)+row('　原材料費',-f.cogs,1)+row('　トッピング費',-f.topc,1)+
-    row('　固定費（'+(ST.stores+(DEC.open?1:0))+'店）',-f.fixed,1)+
-    row('　宣伝費',-DEC.ad,1)+ (f.res?row('　調査費',-f.res,1):'')+ (f.openc?row('　出店費用',-f.openc,1):'')+
+    row('　固定費（'+(ST.stores+(f.D.open?1:0))+'店）',-f.fixed,1)+
+    row('　宣伝費',-f.D.ad,1)+ (f.res?row('　調査費',-f.res,1):'')+ (f.openc?row('　出店費用',-f.openc,1):'')+
     row('　支払利息',-f.interest,1)+
     '<tr class="sum"><td>当期損益</td><td class="'+(f.profit<0?'neg':'pos')+'">'+yen(f.profit)+'</td></tr>'+
     '</tbody></table>'+
     '<table class="pl" style="margin-top:12px"><tbody>'+
-    row('期末現金',f.cash)+row('借入残高',f.debt)+row('　借入枠',f.limit,1)+
+    row('期末現金',f.cash)+row('借入残高',f.debt)+row('　借入枠',f.limitNext,1)+
     row('繰越在庫（食）',f.inv)+
     '<tr class="sum"><td>純資産</td><td>'+yen(f.nav)+'</td></tr></tbody></table>'+
     notes(f,est);
@@ -591,12 +669,11 @@ function row(l,v,sub){return '<tr'+(sub?' class="sub"':'')+'><td>'+l+'</td><td c
 function notes(f,est){
   const out=[];
   if(f.margin<=0) out.push(['warn','1食売るごとに '+yen(-f.margin)+'円 の赤字です。価格が原材料費＋トッピング費を下回っています。']);
-  else if(f.be) out.push(['','1食あたりの粗利は '+yen(f.margin)+'円。固定費と宣伝費を回収するには <strong>'+f.be+'食</strong> 必要です。']);
+  else if(f.be) out.push(['','1食あたりの粗利は '+yen(f.margin)+'円。今期の費用（固定費・宣伝費'+(f.res?'・調査費':'')+(f.openc?'・出店費':'')+(f.interest?'・利息':'')+'）を回収するには <strong>'+f.be+'食</strong> 必要です。']);
   if(est.demand>f.stock*1.05) out.push(['warn','需要が在庫を上回る見込みです。約 '+Math.round(est.demand-f.stock)+'食 を取りこぼします。']);
   if(f.stock>est.dhi*1.25 && f.stock>0) out.push(['','仕入が多めです。予測の上限でも '+Math.round(f.stock-est.dhi)+'食 余ります。在庫は翌期に持ち越せますが現金は先に出ます。']);
-  const need=DEC.buy*CFG.cost+DEC.ad+f.res+f.openc;
-  if(need>ST.cash+Math.max(0,f.limit-ST.debt)) out.push(['warn','支出 '+yen(need)+'円 が手元現金と借入枠の合計を超えています。この仕入はできません。']);
-  if(DEC.buy>CFG.buyCap*(ST.stores+(DEC.open?1:0))) out.push(['warn','仕入上限（'+CFG.buyCap+'食×店舗数）を超えています。']);
+  const cw=clampDec(DEC).warn;
+  if(cw.length) out.unshift(['warn','<b>このまま提出すると、ゲームマスター側で自動的に直されます。</b>上の予測は、直されたあとの値で計算しています。<br>・'+cw.join('<br>・')]);
   if(f.broke) out.push(['warn','借入枠を使い切ります。次期の仕入は '+CFG.buyCapBroke+'食 に制限されます。']);
   const n=SAMPLE.length, wide=(est.dhi-est.dlo)/Math.max(1,est.demand);
   if(n<50) out.push(['','標本 '+n+'人 による予測の幅は '+Math.round(est.dlo)+'〜'+Math.round(est.dhi)+'食（±'+Math.round(50*wide)+'%）。調査を増やせばこの幅は狭まります。']);
@@ -634,6 +711,351 @@ $('#copy').onclick=()=>{const t=$('#submit').textContent;
     setTimeout(()=>$('#copy').textContent='コピーする',1600);},()=>{});};
 addEventListener('resize',()=>{drawHist();drawSens();});
 refresh();
+/* ===================== 配られたシートの読み込み ===================== */
+const SHARE_LABELS={'参加店舗数':'players','1店あたり住人数':'popPer','初期現金':'cash0','原材料費':'cost','価格の下限':'priceFloor',
+  '価格評価が0になる額':'priceRef','人件費':'labor','販管費':'sga','仕入上限':'buyCap','借入枠を使い切ったときの仕入上限':'buyCapBroke',
+  '味のズレへの厳しさ':'tasteSens','選択のゆらぎ':'tau','トッピングの効き':'topK','宣伝ゼロの認知率':'awareBase','認知率の上限':'awareMax',
+  '宣伝の効き(認知)':'awareK','宣伝の効き(話題)':'buzzK','2号店の認知加算':'storeBonus','訴求が刺さる層への倍率':'msgStrong',
+  'それ以外への倍率':'msgWeak','訴求の好感度':'msgBonus','金利':'rate','借入枠の基礎':'creditBase','剰余金による上乗せ':'creditMult',
+  '出店費用':'storeCost','追加調査の費用':'res1','追加調査の人数':'resN1','競合調査の費用':'resRival',
+  'ゲームの期数':'turns','毎期の無料調査（人）':'resFree','ランダムなできごと（1=起きる 0=起きない）':'events'};
+let SURVEYS=[];      // {key,label,rows:[[a,b,c,ideal]],on}
+let LOADED_TEXT='';  // 最後に読み込んだシートの中身（アドバイザー用）
+function numOf(s){const v=parseFloat(String(s||'').replace(/[,，円食人%％\s]/g,'').replace(/[−–]/g,'-'));return isNaN(v)?null:v;}
+function parseSheet(txt){
+  const L=txt.replace(/\r/g,'').split('\n').map(l=>l.split('\t').map(s=>s.trim()));
+  const out={cfg:{},surveys:[],pub:null,pubTurn:0,team:null,turn:0,mei:{},rival:[]};
+  let mode='',cur=null,curTurn=0,hdr=false;
+  for(const c of L){
+    const a=c[0]||'';
+    if(!c.some(x=>x)){continue;}
+    let m;
+    if(/^◆\s*ゲームの設定/.test(a)){mode='cfg';continue;}
+    if((m=a.match(/^◆\s*第(\d+)期の市場調査/))){mode='survey';cur={key:'第'+m[1]+'期の市場調査',label:'第'+m[1]+'期の無料調査',rows:[]};out.surveys.push(cur);continue;}
+    if((m=a.match(/^【(.+?)\s*専用】\s*第(\d+)期の結果/))){out.team=m[1];out.turn=+m[2];curTurn=+m[2];mode='';continue;}
+    if(/^◆\s*追加調査/.test(a)){mode='survey';cur={key:'第'+curTurn+'期の追加調査',label:'第'+curTurn+'期に買った追加調査',rows:[]};out.surveys.push(cur);continue;}
+    if(/^◆\s*競合調査/.test(a)){mode='rival';hdr=true;continue;}
+    if(/^◆\s*今期の明細/.test(a)){mode='mei';continue;}
+    if((m=a.match(/^◆\s*第(\d+)期の結果/))||/^◆\s*全チームの結果/.test(a)){
+      const t=m?+m[1]:(curTurn||out.turn||0);
+      mode='pub'; if(!out.pub||t>out.pubTurn){out.pub=[];out.pubTurn=t;cur=out.pub;}else cur=null; hdr=true; continue;}
+    if(a.startsWith('◆')||a.startsWith('【')){
+      if((m=a.match(/^【(.+?)】\s*第(\d+)期の結果/))){curTurn=+m[2];}
+      mode='';continue;}
+    if(mode==='cfg'&&a==='ゲーム番号'){out.gameId=c[1]||'';continue;}
+    if(mode==='cfg'){const k=SHARE_LABELS[a];const v=numOf(c[1]);if(k&&v!==null)out.cfg[k]=v;continue;}
+    if(mode==='survey'){
+      const v=c.map(numOf).filter(x=>x!==null);
+      if(v.length>=4&&[v[0],v[1],v[2]].every(x=>x>=1&&x<=3)&&new Set(v.slice(0,3)).size===3)cur.rows.push(v.slice(0,4));
+      continue;}
+    if(mode==='pub'){
+      if(a==='順位'){continue;}
+      if(cur&&numOf(a)!==null&&c[1])cur.push({name:c[1],price:numOf(c[2]),msg:Math.max(0,MESSAGES.findIndex(m=>m.n===c[3])),stores:numOf(c[4])||1,share:numOf(c[5]),sold:numOf(c[6])});
+      continue;}
+    if(mode==='rival'){
+      if(a==='店名'){continue;}
+      if(c[1]!==undefined&&numOf(c[1])!==null)out.rival.push({name:a,ad:numOf(c[1]),top:numOf(c[2]),rich:numOf(c[3])});
+      continue;}
+    if(mode==='mei'){const v=numOf(c[1]);if(v!==null)out.mei[a]=v;continue;}
+  }
+  out.surveys=out.surveys.filter(s=>s.rows.length);
+  return out;
+}
+function applySheet(txt){
+  const o=parseSheet(txt);
+  const got=[];
+  // 別のゲームのシートなら、前のゲームの調査・状況を混ぜない
+  let reset=false;
+  if(o.gameId&&o.gameId!==GAME_ID){
+    if(GAME_ID||SURVEYS.length){reset=true;}
+    SURVEYS=[];LOADED_TEXT='';RIVALS.length=0;
+    Object.assign(ST,{turn:1,cash:CFG.cash0||500000,debt:0,inv:0,retained:0,stores:1});
+    GAME_ID=o.gameId;
+  }
+  // 設定
+  const ck=Object.keys(o.cfg);
+  if(ck.length){ck.forEach(k=>{CFG[k]=o.cfg[k];});got.push('ゲームの設定（参加'+CFG.players+'店）');}
+  // いまの状況
+  if(o.team){
+    ST.turn=o.turn+1;
+    if(o.mei['現金']!==undefined)ST.cash=o.mei['現金'];
+    if(o.mei['借入残高']!==undefined)ST.debt=o.mei['借入残高'];
+    if(o.mei['繰越在庫']!==undefined)ST.inv=o.mei['繰越在庫'];
+    if(o.mei['利益剰余金']!==undefined)ST.retained=o.mei['利益剰余金'];
+    const me=o.pub&&o.pub.find(r=>r.name===o.team); if(me)ST.stores=me.stores;
+    got.push('第'+o.turn+'期の決算（'+o.team+'）');
+  }else if(o.surveys.length&&ck.length&&!o.pub){
+    const m=o.surveys[0].key.match(/第(\d+)期/); const t=m?+m[1]:1;
+    if(t===1){ST.turn=1;ST.cash=CFG.cash0||500000;ST.debt=0;ST.inv=0;ST.retained=0;ST.stores=1;}
+  }
+  if(!o.team&&o.pub){ST.turn=o.pubTurn+1;}
+  // 他店
+  if(o.pub&&o.pub.length){
+    const others=o.pub.filter(r=>r.name!==o.team);
+    const old={};RIVALS.forEach(r=>old[r.name]=r);
+    RIVALS.length=0;
+    others.forEach(r=>{const p=old[r.name]||{};const rv=o.rival.find(x=>x.name===r.name);
+      RIVALS.push({name:r.name,price:r.price,msg:r.msg,stores:r.stores,
+        ad:rv?rv.ad:(p.ad!==undefined?p.ad:35000),top:rv?rv.top:(p.top!==undefined?p.top:80),rich:rv?rv.rich:(p.rich!==undefined?p.rich:50),seen:!!rv});});
+    if(!o.team&&others.length===CFG.players){/* 公開情報だけを貼ったときは自店を区別できない */}
+    got.push('他店の公開情報（第'+o.pubTurn+'期）'+(o.rival.length?'と競合調査の結果':''));
+  }
+  // 市場調査（期ごとにたまっていく）
+  o.surveys.forEach(s=>{const i=SURVEYS.findIndex(x=>x.key===s.key);const it={key:s.key,label:s.label,rows:s.rows,on:true};
+    if(i>=0)SURVEYS[i]=it;else SURVEYS.push(it);});
+  SURVEYS.sort((a,b)=>surveyOrder(a)-surveyOrder(b));
+  if(o.surveys.length)got.push('市場調査 '+o.surveys.map(s=>s.label+' '+s.rows.length+'人').join('、'));
+  if(got.length)LOADED_TEXT=txt;
+  saveLoaded();
+  return {got,o,reset};
+}
+function surveyOrder(s){const m=s.key.match(/第(\d+)期/);return (m?+m[1]:0)*10+(/追加/.test(s.key)?5:0);}
+function saveLoaded(){try{localStorage.setItem('ramen-sim-loaded',JSON.stringify({SURVEYS,CFG,ST,RIVALS,LOADED_TEXT,GAME_ID}));}catch(e){}}
+function loadSaved(){
+  try{const o=JSON.parse(localStorage.getItem('ramen-sim-loaded')||'null');if(!o)return false;
+    SURVEYS=o.SURVEYS||[];Object.assign(CFG,o.CFG||{});Object.assign(ST,o.ST||{});
+    if(o.RIVALS&&o.RIVALS.length){RIVALS.length=0;o.RIVALS.forEach(r=>RIVALS.push(r));}
+    LOADED_TEXT=o.LOADED_TEXT||'';GAME_ID=o.GAME_ID||'';return true;}catch(e){return false;}
+}
+function surveysToRaw(){
+  const rows=[];SURVEYS.filter(s=>s.on).forEach(s=>s.rows.forEach(r=>rows.push(r.join(','))));
+  $('#raw').value=rows.join('\n'); $('#raw').dispatchEvent(new Event('input'));
+}
+function renderSurveyList(){
+  const box=$('#surveyList'); if(!box)return;
+  if(!SURVEYS.length){box.innerHTML='';return;}
+  const n=SURVEYS.filter(s=>s.on).reduce((a,s)=>a+s.rows.length,0);
+  box.innerHTML='<div class="fl" style="margin-top:10px">読み込んだ調査（チェックしたものを合わせて使います。いまの合計 <b>'+n+'人</b>）</div>'+
+    SURVEYS.map((s,i)=>'<label style="display:inline-block;margin:2px 14px 2px 0;font-size:12.5px"><input type="checkbox" data-sv="'+i+'"'+(s.on?' checked':'')+'> '+s.label+'（'+s.rows.length+'人）</label>').join('');
+  box.querySelectorAll('[data-sv]').forEach(cb=>cb.onchange=()=>{SURVEYS[+cb.dataset.sv].on=cb.checked;saveLoaded();renderSurveyList();surveysToRaw();});
+}
+function refreshAllAfterLoad(){
+  CFG_FIELDS.forEach(([k])=>{const el=$('#c_'+k);if(el)el.value=CFG[k];});
+  buildState(); buildRivals(); buildDec(); renderSurveyList();
+  if(SURVEYS.length)surveysToRaw(); else refresh();
+}
+$('#loadBtn').onclick=()=>{
+  const txt=$('#loadArea').value;
+  if(!txt.trim()){$('#loadMsg').innerHTML='<div class="note warn">シートの中身を貼ってから押してください。</div>';return;}
+  const {got,o,reset}=applySheet(txt);
+  if(!got.length){$('#loadMsg').innerHTML='<div class="note warn">読み取れるデータが見つかりませんでした。チームのシートのタブを開き、⌘+A（WindowsはCtrl+A）で全体を選んでからコピーして貼ってください。</div>';return;}
+  refreshAllAfterLoad();
+  $('#loadArea').value='';
+  let warn='';
+  if(o.pub&&!o.team)warn='<div class="note">「公開情報」タブを読み込みました。第2期からは、自分のチームの「第○期」タブ（いちばん新しい期）を貼ってください。現金や在庫などの数字も入ります。</div>';
+  if(RIVALS.length!==CFG.players-1&&o.team)warn+='<div class="note warn">他店の数（'+RIVALS.length+'店）が、設定の参加店舗数（'+CFG.players+'店）と合いません。いちばん新しい期のタブを貼ったか確かめてください。</div>';
+  if(reset)warn='<div class="note">前に読み込んでいたのは別のゲームのシートだったので、前の調査といまの状況は消して、新しいゲームとして読み込みました。</div>'+warn;
+  $('#loadMsg').innerHTML='<div class="note ok">読み込みました：'+got.join('／')+'。下の欄に入っています。</div>'+warn;
+};
+$('#loadClear').onclick=()=>{
+  SURVEYS=[];LOADED_TEXT='';GAME_ID='';RIVALS.length=0;
+  Object.assign(ST,{turn:1,cash:CFG.cash0||500000,debt:0,inv:0,retained:0,stores:1});
+  saveLoaded();refreshAllAfterLoad();$('#raw').value='';$('#raw').dispatchEvent(new Event('input'));
+  $('#loadMsg').innerHTML='<div class="note">読み込んだ調査・いまの状況・他店の情報を消しました（設定はそのまま）。</div>';
+};
+if(loadSaved()){refreshAllAfterLoad();if(LOADED_TEXT)$('#loadMsg').innerHTML='<div class="note">前に読み込んだデータが残っています（調査 '+SURVEYS.reduce((a,s)=>a+s.rows.length,0)+'人分）。新しい期のタブを貼ると更新されます。</div>';}
+
+/* ===================== AIに渡すゲームのルール ===================== */
+const RULE_DEF={popPer:600,cost:300,priceFloor:300,priceRef:800,labor:20000,sga:10000,buyCap:1500,buyCapBroke:200,
+  cash0:500000,tasteSens:1.4,tau:0.15,topK:80,awareBase:0.25,awareMax:0.97,awareK:35000,buzzK:15000,storeBonus:0.10,
+  msgStrong:1.60,msgWeak:0.55,msgBonus:0.06,repeatThresh:0.55,rate:0.05,creditBase:300000,creditMult:1.0,
+  storeCost:200000,resFree:20,res1:15000,resN1:80,resRival:25000,events:1};
+function rulesText(src,opt){
+  opt=opt||{};
+  const V=k=>(src&&src[k]!==undefined&&src[k]!==null&&!(typeof src[k]==='number'&&isNaN(src[k])))?src[k]:RULE_DEF[k];
+  const Y=v=>Math.round(v).toLocaleString('ja-JP');
+  const per1000=(1000*V('resN1')/V('res1')).toFixed(1);
+  const L=[];
+  L.push('## ゲームのルール');
+  L.push('### 目的');
+  L.push('各チームが1軒のラーメン店を経営し、'+(opt.turns?'全'+opt.turns+'期':'決められた期数')+'（1期＝1ターン）を戦う。最終期の「純資産」が多いほど上位。');
+  L.push('純資産＝現金＋在庫×原材料費の半額（1食'+Y(V('cost')/2)+'円で評価）−借入残高。開始時の現金は'+Y(V('cash0'))+'円、借入0、在庫0、1店舗。');
+  L.push('### 街と客');
+  L.push('- 住人は「店の数×'+V('popPer')+'人」。毎期、全員が1杯ずつどこかの店で食べようとする。');
+  L.push('- 住人はそれぞれ「価格・宣伝（話題）・味」を重視する順位を持つ。1位の重みは0.6、2位は0.3、3位は0.1。1位が価格なら「価格志向」、宣伝なら「宣伝志向」、味なら「味覚志向」と呼ぶ。');
+  L.push('- 住人はそれぞれ「理想のこってり度」（0＝あっさり〜100＝こってり）を持つ。街全体で見ると好みの山が1つか2つある。');
+  L.push('- 各志向が何割いるか、こってり度の山がどこにあるかは街ごとに違い、プレイヤーには知らされない。市場調査（住人からランダムに選んだ標本）から推測するしかない。');
+  L.push('### 毎期、各チームが決めること');
+  L.push('仕入数（食）／販売価格（円・下限'+V('priceFloor')+'円）／トッピング費（1食あたり円）／宣伝費（円）／宣伝の訴求（認知拡大・安さ訴求・話題性訴求・味わい訴求のどれか）／こってり度（0〜100）／追加調査費（円）／競合調査を買うか／2号店を出すか');
+  L.push('### 客が店を選ぶしくみ');
+  L.push('1. 客は「知っている店」の中からしか選ばない（認知）。ある住人がある店を知っている確率＝'+V('awareBase')+'（宣伝ゼロでも）＋上乗せ分×訴求の倍率。上限は'+V('awareMax')+'。');
+  L.push('   - 宣伝による上乗せ＝(1−'+V('awareBase')+')×宣伝費÷(宣伝費＋'+Y(V('awareK'))+')。宣伝費を増やすほど知られるが、だんだん効きが鈍くなる。');
+  L.push('   - 2号店があると上乗せ分に'+V('storeBonus')+'が加わる。');
+  L.push('   - 訴求の倍率：認知拡大は全員に1倍。安さ訴求は価格志向の住人、話題性訴求は宣伝志向の住人、味わい訴求は味覚志向の住人に'+V('msgStrong')+'倍、それ以外の住人には'+V('msgWeak')+'倍。');
+  L.push('   - 前期にその店で食べて満足度が'+V('repeatThresh')+'を超えた客は「常連」になり、次の期はその店を必ず知っている。');
+  L.push('2. 知っている店の中で「満足度」がいちばん高い店を選ぶ。満足度には小さな気まぐれ（ゆらぎ）が毎回加わる。どの店も知らない客はランダムに入る。');
+  L.push('   満足度＝価格の重み×価格の魅力＋宣伝の重み×話題度＋味の重み×（トッピングの魅力−味のズレ）');
+  L.push('   - 価格の魅力＝('+V('priceRef')+'−販売価格)÷('+V('priceRef')+'−'+V('priceFloor')+')。'+V('priceFloor')+'円で1、'+V('priceRef')+'円で0、それより高いとマイナス（1が上限）。');
+  L.push('   - 話題度＝宣伝費÷(宣伝費＋'+Y(V('buzzK'))+')');
+  L.push('   - トッピングの魅力＝トッピング費÷(トッピング費＋'+V('topK')+')');
+  L.push('   - 味のズレ＝'+V('tasteSens')+'÷100×|理想のこってり度−店のこってり度|。2号店があると幅広い好みに応えられるため、このズレが0.55倍に小さくなる。');
+  L.push('   - 訴求が客の第1志向と合っていれば、満足度に'+V('msgBonus')+'×話題度が加わる。');
+  L.push('3. 在庫（繰越在庫＋今期の仕入）より客が多いと品切れになる。あふれた客は、在庫が残っている他の店があれば、そのうち満足度がいちばん高い店に流れる（受け取った店から見ると「流入」）。品切れで逃した数が「機会損失」。');
+  L.push('### お金の流れ');
+  L.push('- 期のはじめに払うもの：仕入（原材料費'+V('cost')+'円×仕入数）、宣伝費、調査費、出店費。現金が足りなければ自動で借り入れる。');
+  L.push('- 売上＝販売数×販売価格。トッピング費は売れた杯数×単価だけかかる。');
+  L.push('- 固定費：1店あたり毎期'+Y(V('labor')+V('sga'))+'円（人件費'+Y(V('labor'))+'円＋販管費'+Y(V('sga'))+'円）。');
+  L.push('- 利息：借入残高×'+(V('rate')*100).toFixed(1).replace(/\.0$/,'')+'%を毎期払う。借入は自動では返済されない（現金が増えても借入残高は減らない）。');
+  L.push('- 損益計算では、原材料費は売れた分だけが費用になる。売れ残りは在庫として翌期に繰り越せる（傷まない）が、順位を決める純資産では原価の半額でしか評価されない。');
+  L.push('- 借入枠＝'+Y(V('creditBase'))+'円＋利益剰余金（プラスのときだけ）×'+V('creditMult')+'。宣伝・調査・出店の合計が「現金＋借入の残り枠」を超えると、出店と調査が取り消され宣伝費が削られる。仕入も資金で買える数まで削られる。現金ゼロで借入枠を使い切ると、仕入は'+V('buyCapBroke')+'食までに制限される。');
+  L.push('- 仕入の上限は'+V('buyCap')+'食×店舗数。');
+  L.push('### 2号店');
+  L.push('- 1回だけ出せる。出店費'+Y(V('storeCost'))+'円（その期の費用）。以後、固定費が2店分になり、仕入上限が2倍、認知の上乗せ、味のズレがゆるくなる。');
+  L.push('### 調査');
+  L.push('- 無料の市場調査：毎期'+V('resFree')+'人分。全チーム共通の同じ標本が配られる。1行が住人1人で、「価格の順位・宣伝の順位・味覚の順位（1〜3）」と「理想のこってり度」。');
+  L.push('- 追加調査：お金を払うと、そのチームだけに追加の標本が届く（1000円あたり約'+per1000+'人）。');
+  L.push('- 競合調査（'+Y(V('resRival'))+'円）：その期の他店の宣伝費・トッピング費・こってり度が分かる（その期の値なので、次の期には変わっているかもしれない）。');
+  L.push('### ランダムなできごと');
+  if(V('events')) L.push('毎期20%の確率で、次のどれか1つが起こる：豚骨価格高騰（その期の仕入が1食50円割増）／テレビ特集（味の重みが1.35倍）／不況（価格の魅力が1.35倍）／商店街の祭り（客が15%増）。');
+  else L.push('このゲームではランダムなできごとは起こらない設定。');
+  L.push('### 見える情報・見えない情報');
+  L.push('- 全員に公開：各店の販売価格・訴求・店舗数・シェア・販売数、純資産の順位、その期のできごと、無料の市場調査。');
+  L.push('- 自分のチームだけ：自分の決算（損益・現金・借入・在庫など）、自分が買った追加調査と競合調査の結果。');
+  L.push('- 誰にも見えない：他店の宣伝費・トッピング費・こってり度・仕入数・資金（競合調査で一部が分かる）、街の本当の姿（志向の割合・こってり度の山）。');
+  return L.join('\n');
+}
+function copyText(t,btn,label){
+  const done=()=>{if(!btn)return;const o=label||btn.textContent;btn.textContent='コピーしました';setTimeout(()=>btn.textContent=o,1600);};
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(done,()=>{fallbackCopy(t);done();});}
+  else{fallbackCopy(t);done();}
+}
+function fallbackCopy(t){
+  const a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';
+  document.body.appendChild(a);a.select();try{document.execCommand('copy');}catch(e){}a.remove();
+}
+
+/* ===================== 経営アドバイザー（AI用プロンプト） ===================== */
+function med(a){const n=a.length;return n?(n%2?a[(n-1)/2]:(a[n/2-1]+a[n/2])/2):0;}
+function advisorRole(){
+  return [
+'# ラーメン経営ゲーム　経営アドバイザーへの相談',
+'',
+'あなたは、大学の授業で行う経営シミュレーションゲーム「ラーメン経営ゲーム」の「経営アドバイザー」です。相談相手は、このゲームに参加している大学生です。下に、ゲームのルール、学生が使っている画面のしくみ、学生がいま入力しているデータを載せます。',
+'',
+'## あなたの役割と守ること',
+'これは教育用のゲームです。いちばん大事なのは、学生が自分で考えて決めることです。',
+'1. 答えを決めつけない。「価格は○円にすべき」「これが正解」とは言わない。かわりに「〜という前提に立つなら、〜が考えられる」「〜に注目してみては」という形で、前提・選択肢・理由を示す。',
+'2. 作戦の案を出すときは2〜3案にする。それぞれ「どんな前提なら向いているか」「得するところ（メリット）」「損するかもしれないところ（リスク）」を添える。おすすめを1つに絞らない。',
+'3. 学生に「どうすればいい？」「答えを教えて」と言われても、1つに決めない。前提ごとの案を示し、最後は自分で選ぶよう促す。',
+'4. 数字の解説は具体的に。画面の数字がどこから来ていて、何を意味しているのかを説明する。計算するときは式を見せ、必ず検算する。',
+'5. 分からないことは分からないと言う。街の本当の姿（各志向の割合、こってり度の山の位置）と、他店の見えない値（宣伝費・トッピング費・こってり度など）は、あなたにも分からない。標本や想定から推測するときは、推測だと断り、どのくらい当てにできるか（標本が少ない、想定しだい、など）を添える。',
+'6. ルールに書かれていないことを作らない。ルールで決まっていることは、ルールどおりに説明する。',
+'7. 用語や数字について質問されたら、中学生でも分かることばで答える。ラーメン屋の身近なたとえを使う（例：粗利＝1杯売ったときに手元に残るお金）。質問がなくても、純資産・機会損失・シェア・損益分岐点・借入枠・利益剰余金などの用語を初めて使うときは、かっこで短い言いかえを添える。',
+'8. 当期の損益だけでなく、順位を決める「純資産」への影響も見る。売れ残りは損益では費用にならないが、純資産では原価の半額でしか数えないので、損益が増えても純資産が減ることがある。',
+'9. 貼り付けられた結果と、いまの状況の数字（期、現金など）が食い違うときは、その点を指摘して学生に確かめる。',
+'10. 他のチームの情報を盗み見る方法や、ゲームマスターをだます方法など、ルール違反には協力しない。',
+'',
+'## 最初の返事の形',
+'学生からの質問が書かれていれば、質問への答えを中心にし、下の流れは要点だけを短く添える。質問がなければ、下の流れで答える。',
+'1. いまの状況のまとめ（3〜5行、数字つき）',
+'2. 数字の解説：予測や損益のうち大事な数字を、意味が分かるように',
+'3. 注目したいポイント：見落としやすい点やリスクを2〜4つ（品切れ、売れ残り、資金、標本の少なさ、他店の想定への頼りすぎ など）',
+'4. 考えられる作戦：「もし〜と考えるなら」の形で2〜3案',
+'5. 自分で考えるための問いかけを2つ',
+'最後に「用語や数字で分からないところがあれば、何でも聞いてください」と一言添える。全体で2000字くらいまでに収める。学生はスマホで読むことが多いので、表は3〜4列までにする。',
+'',
+'## このあとの会話',
+'学生はこのあと質問を続けることがある。そのときも上の「守ること」を続けて守る。新しいデータを貼られたら、それをもとに考え直す。'
+  ].join('\n');
+}
+
+function simScreenText(){
+  return [
+'## 学生が使っている画面：作戦シミュレーター',
+'今期の決定を考えるための試算画面。上から次の順に並んでいる。',
+'- 配られたシートを読み込む：チームのシート（Googleスプレッドシート）のタブの中身を貼ると、ゲームの設定・いまの状況・他店の公開情報・競合調査の結果・市場調査がまとめて入る。市場調査は期ごとにたまり、どれを使うかをチェックで選べる。',
+'- いまの状況：今期の番号、現金、借入残高、繰越在庫、利益剰余金、店舗数。読み込むと自動で入り、手で直すこともできる。',
+'- 市場調査データ：読み込んだ調査の標本（1行1人）。右に「理想こってり度」の棒グラフ（標本の分布）と、自店・他店（想定）の位置が出る。下に第1志向の割合の推定と、その80%の幅（標本が少ないほど幅が広い）が出る。',
+'- 他店の想定：価格・訴求・店舗数は公開情報。宣伝費・トッピング費・こってり度は見えないので、学生が想像で入れる「想定値」。',
+'- 今期の決定：仕入数・販売価格・トッピング費・宣伝費・こってり度をスライダーで、訴求をボタンで選び、競合調査・2号店・追加調査を選ぶ。右側にすぐ予測が出る（予測販売数、需要の見込みの幅、予測当期損益、シェア、損益の内訳、期末の現金・借入・在庫・純資産、注意書き）。',
+'- 販売価格を変えたら：ほかの条件はそのままで価格だけ動かしたときの、予測利益の曲線。「この標本での最良」の価格に印がつく。',
+'- 提出する値の控え：提出フォームに入れる値をまとめた1行。',
+'- ゲームの共通設定：ルールの数値。シートを読み込むと、ゲームマスターの設定が自動で入る。',
+'- 経営アドバイザー：このプロンプトをつくる場所。',
+'',
+'### 予測のしくみと限界（解説するときに必ず踏まえること）',
+'- 標本の1人1人を「街の住人の代表」とみなし、自店と他店（想定値）を前にしてその人が自店を選ぶ確率を、ルールどおりの計算をくり返して出す。その平均×街の人口が需要の予測になる。',
+'- 「需要の見込み」の幅は、標本を何度も選び直して計算した80%の幅（標本の偶然による誤差）。',
+'- 「他店の想定が外れた場合」の幅は、他店の宣伝費・トッピング・こってり度の想定をずらして計算した幅。',
+'- 「第一希望に選ばれる割合」は、街の住人のうち、この店を第一希望に選ぶ人の割合の予測。結果の「シェア」（全店の販売数に占める自店の販売数の割合）とは別のもので、在庫が足りなければ実際の販売は少なくなる。',
+'- 入力が資金や上限の決まりに合わないときは、ゲームマスター側で自動的に直される（出店・調査の取り消し、宣伝費・仕入数の削減など）。予測は直されたあとの値で計算している。',
+'- 予測に入っていないもの：常連客、ランダムなできごと、他店の品切れで流れてくる客、他店がこちらの動きに合わせて作戦を変えること。',
+'- 価格の曲線の山（最良の価格）は「他店が想定どおりで動かない」前提の話。全員が同じ理屈で値上げすれば、この山は崩れる。',
+'- 標本が少ないと、こってり度の山の位置も志向の割合も大きく外れることがある。'
+  ].join('\n');
+}
+function simSensPoints(){
+  const save=DEC.price, pts=[];
+  const lo=CFG.priceFloor, hi=Math.max(CFG.priceFloor+200,Math.min(1500,Math.round(CFG.priceRef*1.6)));
+  for(let p=lo;p<=hi;p+=50){DEC.price=p;const e=estimate();const f=pnl(e.demand);pts.push({p,profit:f.profit,sold:f.sold,nav:f.nav,inv:f.inv,dem:Math.round(e.demand)});}
+  DEC.price=save; return pts;
+}
+function buildSimAdvisor(){
+  const Y=v=>Math.round(v).toLocaleString('ja-JP');
+  const L=[advisorRole(),''];
+  const q=($('#advQ').value||'').trim();
+  if(q){L.push('## 学生からの質問');L.push(q);L.push('');}
+  L.push(rulesText(Object.assign({resRival:CFG.resRival},CFG),{turns:CFG.turns}));
+  L.push('');
+  L.push(simScreenText());
+  L.push('');
+  L.push('# 学生がいま入力しているデータ');
+  L.push('');
+  L.push('## いまの状況');
+  L.push('第'+ST.turn+'期の決定を考えている。現金 '+Y(ST.cash)+'円／借入残高 '+Y(ST.debt)+'円／繰越在庫 '+ST.inv+'食／利益剰余金 '+Y(ST.retained)+'円／店舗数 '+ST.stores+'店。参加店舗数（自店を含む）'+CFG.players+'店、街の人口 '+Y(CFG.players*CFG.popPer)+'人。');
+  L.push('');
+  L.push('## 市場調査の標本');
+  if(!SAMPLE.length){L.push('まだ標本を入れていない。');}
+  else{
+    const n=SAMPLE.length,c=[0,0,0];SAMPLE.forEach(s=>c[s.first]++);
+    const se=p=>100*1.28*Math.sqrt(p*(1-p)/n);
+    L.push(n+'人。第1志向の推定（80%の幅）：'+['価格','宣伝','味覚'].map((l,i)=>l+' '+(100*c[i]/n).toFixed(0)+'%±'+se(c[i]/n).toFixed(0)).join('、'));
+    const id=SAMPLE.map(s=>s.ideal).sort((a,b)=>a-b);
+    L.push('理想こってり度：平均 '+Math.round(id.reduce((a,b)=>a+b,0)/n)+'、中央値 '+med(id)+'、最小 '+id[0]+'、最大 '+id[n-1]);
+    const bins=new Array(10).fill(0);id.forEach(v=>bins[Math.min(9,Math.floor(v/10))]++);
+    L.push('10刻みの人数：'+bins.map((v,i)=>(i*10)+'〜'+(i===9?100:i*10+9)+':'+v).join('　'));
+    if(n<=150){L.push('標本の中身（価格の順位, 宣伝の順位, 味覚の順位, 理想こってり度）：');SAMPLE.forEach(s=>L.push((s.r[0]+1)+','+(s.r[1]+1)+','+(s.r[2]+1)+','+s.ideal));}
+  }
+  L.push('');
+  L.push('## 他店の想定（価格・訴求・店舗数は公開情報、宣伝費・トッピング・こってり度は学生の想定）');
+  L.push(['店名','価格(公開)','訴求(公開)','店舗数(公開)','宣伝費(想定)','トッピング(想定)','こってり度(想定)'].join('\t'));
+  RIVALS.forEach(r=>L.push([r.name,r.price,MESSAGES[r.msg].n,r.stores,r.ad,r.top,r.rich].join('\t')));
+  L.push('');
+  L.push('## 今期の決定（いまの入力）');
+  L.push('仕入 '+DEC.buy+'食／価格 '+DEC.price+'円／トッピング '+DEC.top+'円／宣伝費 '+Y(DEC.ad)+'円／訴求「'+MESSAGES[DEC.msg].n+'」／こってり度 '+DEC.rich+
+    '／追加調査 '+Y(DEC.research)+'円／競合調査 '+(DEC.rival?'買う':'買わない')+'／2号店 '+(DEC.open?'出す':'出さない'));
+  const cw=clampDec(DEC).warn;
+  if(cw.length)L.push('※このまま提出すると、ゲームマスター側で次のように直される（予測は直したあとの値）：'+cw.join('／'));
+  L.push('');
+  const est=estimate();
+  if(est){
+    const f=pnl(est.demand);
+    L.push('## シミュレーターの予測（いまの入力で）');
+    L.push('予測販売数 '+f.sold+'食（需要の見込み '+Math.round(est.dlo)+'〜'+Math.round(est.dhi)+'食、中心 '+Math.round(est.demand)+'食）／第一希望に選ばれる割合 '+(100*est.share).toFixed(1)+'%（全店が同じなら '+(100/CFG.players).toFixed(1)+'%）');
+    L.push('損益の内訳：売上 '+Y(f.rev)+'／原材料費 −'+Y(f.cogs)+'／トッピング費 −'+Y(f.topc)+'／固定費 −'+Y(f.fixed)+'／宣伝費 −'+Y(DEC.ad)+(f.res?'／調査費 −'+Y(f.res):'')+(f.openc?'／出店費 −'+Y(f.openc):'')+'／支払利息 −'+Y(f.interest)+'／当期損益 '+Y(f.profit));
+    L.push('期末の見込み：現金 '+Y(f.cash)+'円／借入残高 '+Y(f.debt)+'円（借入枠 '+Y(f.limitNext)+'円）／繰越在庫 '+f.inv+'食／純資産 '+Y(f.nav)+'円');
+    L.push('1食あたり粗利 '+f.margin+'円'+(f.be?'／損益分岐点（固定費・宣伝費・調査費・利息を回収するのに必要な販売数） '+f.be+'食':''));
+    const tmp=document.createElement('div');tmp.innerHTML=notes(f,est);
+    const ns=Array.from(tmp.querySelectorAll('.note')).map(d=>d.textContent.trim()).filter(Boolean);
+    if(ns.length){L.push('画面の注意書き：');ns.forEach(t=>L.push('- '+t));}
+    L.push('');
+    L.push('## 販売価格だけ変えたときの予測（画面の「販売価格を変えたら」のグラフと同じ計算）');
+    L.push('仕入数（'+DEC.buy+'食）・トッピング・宣伝などほかの決定はいまの入力のまま、他店も想定どおりで動かない前提。需要が在庫より多い価格では販売数が在庫で頭打ちになり、少ない価格では売れ残りが出る。');
+    L.push(['価格','予測需要','予測販売数','売れ残り','当期損益','期末純資産'].join('\t'));
+    simSensPoints().forEach(o=>L.push([o.p,o.dem,o.sold,o.inv,o.profit,o.nav].join('\t')));
+  }else{
+    L.push('## シミュレーターの予測');L.push('標本が入っていないので、予測はまだ出ていない。');
+  }
+  const past=(LOADED_TEXT||'').trim();
+  if(past){L.push('');L.push('## 最後に読み込んだシートの中身（チームのシートから学生が貼ったもの）');L.push(past.length>15000?past.slice(0,15000)+'\n（長いので途中まで）':past);}
+  return L.join('\n');
+}
+$('#advCopy').onclick=()=>{
+  const t=buildSimAdvisor();
+  copyText(t,$('#advCopy'),'アドバイザー用にコピー');
+  $('#advMsg').innerHTML='<div class="note">コピーしました（約'+Math.round(t.length/1000)+'千字）。ChatGPT・Claude・Geminiなどの入力欄に貼り付けて送ってください。</div>';
+};
+
 </script>
 </body>
 </html>
